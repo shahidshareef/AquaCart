@@ -1,0 +1,30 @@
+.header {
+    width: 100%;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo {
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.footer {
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    background-color: #ffffff;
+    color: #0f172a;
+    box-sizing: border-box;
+}

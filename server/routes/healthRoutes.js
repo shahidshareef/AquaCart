@@ -1,8 +1,9 @@
 const express = require("express");
+const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
-router.get("/", (req, res)=>{
+router.get("/", (req, res) => {
     res.json({
-        message: "AquaCart api is running"
-    })
-})
+        message: "AquaCart API is running"
+    });
+});
 module.exports = router;

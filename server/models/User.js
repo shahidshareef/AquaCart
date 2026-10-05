@@ -43,12 +43,20 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        
+
         emailVerificationOtp: {
             type: String
         },
 
         emailVerificationOtpExpiresAt: {
+            type: Date
+        },
+
+        adminOtp: {
+            type: String
+        },
+
+        adminOtpExpiresAt: {
             type: Date
         }
     },
