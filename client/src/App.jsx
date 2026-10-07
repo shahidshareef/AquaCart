@@ -6,6 +6,9 @@ import EmailVerification from "./pages/customer/EmailVerification";
 import ForgotPassword from "./pages/customer/ForgotPassword";
 import SetNewPassword from "./pages/customer/SetNewPassword";
 import Home from "./pages/customer/Home";
+import CustomerProducts  from "./pages/customer/Products";
+
+
 //admin
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminOtpVerification from "./pages/admin/AdminOtpVerification";
@@ -31,6 +34,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/set-new-password" element={<SetNewPassword />} />
         <Route path="/" element={<Home />} />
+        <Route path="/products" element={<CustomerProducts  />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/verify-otp" element={<AdminOtpVerification />}/>
