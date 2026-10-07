@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const ProductVariant = require("../models/ProductVariant");
+const Review = require("../models/Review");
 
 async function getFeaturedProducts() {
     // Find the top-selling products
@@ -337,8 +338,105 @@ async function getCustomerProducts({
         }
     };
 }
+async function getCustomerProductById(productId) {
+    const product = await Product.findOne({
+        _id: productId,
+        status: "active"
+    }).populate("category", "name");
+
+    if (!product) {
+        return null;
+    }
+
+    const variants = await ProductVariant.find({
+        product: productId,
+        status: "active"
+    }).sort({
+        price: 1
+    });
+
+    return {
+        ...product.toObject(),
+        variants
+    };
+}
+async function getRelatedProducts(productId) {
+    const currentProduct = await Product.findOne({
+        _id: productId,
+        status: "active"
+    });
+
+    if (!currentProduct) {
+        return [];
+    }
+
+    const relatedProducts = await Product.aggregate([
+        {
+            $match: {
+                status: "active",
+                category: currentProduct.category,
+                _id: {
+                    $ne: new mongoose.Types.ObjectId(productId)
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: "productvariants",
+                localField: "_id",
+                foreignField: "product",
+                as: "variants"
+            }
+        },
+        {
+            $addFields: {
+                variants: {
+                    $filter: {
+                        input: "$variants",
+                        as: "variant",
+                        cond: {
+                            $eq: ["$$variant.status", "active"]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $match: {
+                "variants.0": {
+                    $exists: true
+                }
+            }
+        },
+        {
+            $sort: {
+                createdAt: -1
+            }
+        },
+        {
+            $limit: 4
+        }
+    ]);
+
+    return relatedProducts;
+}
+
+async function getProductReviews(productId) {
+    const reviews = await Review.find({
+        product: productId
+    })
+        .populate("user", "name")
+        .sort({
+            createdAt: -1
+        });
+
+    return reviews;
+}
 
 module.exports = {
     getFeaturedProducts,
-    getCustomerProducts
+    getCustomerProducts,
+    getCustomerProductById,
+    getRelatedProducts,
+    getProductReviews
 };
