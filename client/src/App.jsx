@@ -8,6 +8,7 @@ import SetNewPassword from "./pages/customer/SetNewPassword";
 import Home from "./pages/customer/Home";
 import CustomerProducts  from "./pages/customer/Products";
 import ProductDetails from "./pages/customer/ProductDetails";
+import Cart from "./pages/customer/Cart";
 
 
 //admin
@@ -37,6 +38,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<CustomerProducts  />} />
         <Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/cart" element={<Cart />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/verify-otp" element={<AdminOtpVerification />}/>

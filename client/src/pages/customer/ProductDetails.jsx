@@ -14,6 +14,7 @@ function ProductDetails() {
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [reviews, setReviews] = useState([]);
+    const [cartMessage, setCartMessage] = useState("");
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -80,6 +81,7 @@ function ProductDetails() {
     function handleVariantChange(variant) {
         setSelectedVariant(variant);
         setQuantity(1);
+        setCartMessage("");
     }
 
     function decreaseQuantity() {
@@ -96,6 +98,68 @@ function ProductDetails() {
         setQuantity((currentQuantity) =>
             Math.min(selectedVariant.stock, currentQuantity + 1)
         );
+    }
+
+    async function handleAddToCart() {
+        try {
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                navigate("/login");
+                return;
+            }
+
+            setCartMessage("");
+
+            const response = await fetch(
+                "http://localhost:5000/api/cart",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        productId: product._id,
+                        variantId: selectedVariant._id,
+                        quantity: quantity
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to add item to cart"
+                );
+            }
+
+            if (result.alreadyInCart) {
+                setCartMessage(
+                    "This item is already in your cart. Quantity updated."
+                );
+            } else {
+                setCartMessage(
+                    "Item added to cart successfully."
+                );
+            }
+
+            setTimeout(() => {
+                setCartMessage("");
+            }, 3000);
+
+        } catch (error) {
+            console.error(error);
+
+            setCartMessage(
+                error.message || "Failed to add item to cart."
+            );
+
+            setTimeout(() => {
+                setCartMessage("");
+            }, 3000);
+        }
     }
 
     if (loading) {
@@ -289,11 +353,19 @@ function ProductDetails() {
                                     !selectedVariant ||
                                     selectedVariant.stock === 0
                                 }
+                                onClick={handleAddToCart}
                             >
-                                🛍 Add to Cart
+                                Add to Cart
                             </button>
 
                         </div>
+
+                        {/* Cart Message */}
+                        {cartMessage && (
+                            <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                {cartMessage}
+                            </div>
+                        )}
 
                     </div>
                 </section>
