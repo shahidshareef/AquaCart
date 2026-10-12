@@ -61,7 +61,10 @@ function Home() {
                             and hot for 12 hours.
                         </p>
 
-                        <button type="button">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/products")}
+                        >
                             Shop Now →
                         </button>
                     </div>
@@ -172,7 +175,6 @@ function Home() {
                                             }
                                             alt={product.name}
                                         />
-
 
                                         <div className="featured-product-info">
 

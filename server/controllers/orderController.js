@@ -103,8 +103,63 @@ async function updateOrderStatusController(req, res) {
     }
 }
 
+const { createCustomerOrder } = require("../services/orderService");
+
+async function createCustomerOrderController(req, res) {
+    try {
+        const userId = req.user.userId;
+
+        const {
+            addressId,
+            paymentMethod,
+            couponCode
+        } = req.body;
+
+        if (!addressId || !paymentMethod) {
+            return res.status(400).json({
+                message: "Address and payment method are required"
+            });
+        }
+
+        const order = await createCustomerOrder(
+            userId,
+            addressId,
+            paymentMethod,
+            couponCode
+        );
+
+        return res.status(201).json({
+            message: "Order created successfully",
+            data: order
+        });
+    } catch (error) {
+        console.error(error);
+
+        const clientErrors = [
+            "Invalid payment method",
+            "Address not found",
+            "Your cart is empty",
+            "A cart item is no longer available",
+            "Invalid or expired coupon",
+            "Minimum order amount not met",
+            "Coupon usage limit has been reached"
+        ];
+
+        const isClientError =
+            clientErrors.includes(error.message) ||
+            error.message.startsWith("Insufficient stock");
+
+        return res.status(isClientError ? 400 : 500).json({
+            message: isClientError
+                ? error.message
+                : "Failed to create order"
+        });
+    }
+}
+
 module.exports = {
     getOrders,
     getOrderByIdController,
-    updateOrderStatusController
+    updateOrderStatusController,
+    createCustomerOrderController
 };

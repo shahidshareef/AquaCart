@@ -61,7 +61,8 @@ function Header() {
                     <button
                         type="button"
                         className="header-search-button"
-                        aria-label="Search"
+                        aria-label="Search products"
+                        onClick={() => navigate("/products")}
                     >
                         🔍
                     </button>
