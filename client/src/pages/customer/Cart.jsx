@@ -235,7 +235,7 @@ function Cart() {
                                                         disabled={
                                                             isUpdating ||
                                                             item.quantity >=
-                                                                item.variant.stock
+                                                            item.variant.stock
                                                         }
                                                         onClick={() =>
                                                             handleQuantityChange(
@@ -304,6 +304,7 @@ function Cart() {
                             <button
                                 type="button"
                                 className="cart-checkout-button"
+                                onClick={() => navigate("/checkout")}
                             >
                                 Proceed to Checkout
                             </button>

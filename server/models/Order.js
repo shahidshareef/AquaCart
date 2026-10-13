@@ -51,15 +51,32 @@ const orderSchema = new mongoose.Schema(
             min: 0
         },
 
+
+        couponCode: {
+            type: String,
+            default: null
+        },
+
+        discountAmount: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+
         paymentMethod: {
             type: String,
             enum: ["razorpay", "cod"],
             required: true
         },
-
         paymentStatus: {
             type: String,
-            enum: ["pending", "paid", "failed", "refunded"],
+            enum: [
+                "pending",
+                "paid",
+                "failed",
+                "refunded",
+                "review_required"
+            ],
             default: "pending"
         },
 

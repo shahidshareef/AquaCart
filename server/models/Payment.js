@@ -26,6 +26,11 @@ const paymentSchema = new mongoose.Schema(
             sparse: true
         },
 
+        razorpayOrderId: {
+            type: String,
+            sparse: true
+        },
+
         amount: {
             type: Number,
             required: true,
@@ -34,7 +39,13 @@ const paymentSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["pending", "paid", "failed", "refunded"],
+            enum: [
+                "pending",
+                "paid",
+                "failed",
+                "refunded",
+                "review_required"
+            ],
             default: "pending"
         }
     },

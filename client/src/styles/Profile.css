@@ -1,0 +1,553 @@
+/* ================================
+   Profile Page
+================================ */
+
+.profile-page {
+    min-height: 70vh;
+    background: #f8fafc;
+    padding: 40px 20px 60px;
+}
+
+.profile-container {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* ================================
+   Breadcrumb
+================================ */
+
+.profile-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 35px;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.profile-breadcrumb a {
+    color: #0ea5e9;
+    text-decoration: none;
+}
+
+.profile-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.profile-breadcrumb span:last-child {
+    color: #0f172a;
+    font-weight: 500;
+}
+
+/* ================================
+   Header
+================================ */
+
+.profile-header {
+    margin-bottom: 30px;
+}
+
+.profile-header h1 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.profile-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 16px;
+}
+
+/* ================================
+   Profile Section
+================================ */
+
+.profile-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.profile-section h2 {
+    margin: 0 0 25px;
+    color: #0f172a;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+/* ================================
+   Information Grid
+================================ */
+
+.profile-information {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.profile-information > div {
+    padding: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.profile-information span {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.profile-information p {
+    margin: 0;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* ================================
+   Responsive
+================================ */
+
+@media (max-width: 768px) {
+    .profile-page {
+        padding: 30px 16px 50px;
+    }
+
+    .profile-header h1 {
+        font-size: 28px;
+    }
+
+    .profile-information {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-section {
+        padding: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-breadcrumb {
+        margin-bottom: 25px;
+        font-size: 13px;
+    }
+
+    .profile-header h1 {
+        font-size: 24px;
+    }
+
+    .profile-header p {
+        font-size: 14px;
+    }
+
+    .profile-section {
+        padding: 18px;
+    }
+}
+
+/* ========================================
+   ORDER HISTORY
+======================================== */
+
+.profile-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.profile-order-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.profile-order-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.07);
+}
+
+/* Order ID and date */
+
+.profile-order-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-order-header span,
+.profile-order-details span,
+.profile-order-shipping span {
+    display: block;
+    margin-bottom: 7px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+}
+
+.profile-order-header p {
+    margin: 0;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Ordered products */
+
+.profile-order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 6px 0;
+}
+
+.profile-order-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.profile-order-item:last-child {
+    border-bottom: none;
+}
+
+.profile-order-item > div {
+    min-width: 0;
+}
+
+.profile-order-item p {
+    margin: 0;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.profile-order-item span {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.profile-order-item > p {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Payment and order details */
+
+.profile-order-details {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    padding: 18px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-order-details > div {
+    min-width: 0;
+}
+
+.profile-order-details p {
+    margin: 0;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Delivery address */
+
+.profile-order-shipping {
+    padding-top: 18px;
+}
+
+.profile-order-shipping p {
+    margin: 5px 0 0;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+/* ========================================
+   RESPONSIVE ORDER HISTORY
+======================================== */
+
+@media (max-width: 768px) {
+    .profile-order-card {
+        padding: 18px;
+    }
+
+    .profile-order-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-order-list {
+        gap: 15px;
+    }
+
+    .profile-order-card {
+        padding: 14px;
+        border-radius: 10px;
+    }
+
+    .profile-order-header {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .profile-order-item {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .profile-order-item p {
+        font-size: 13px;
+    }
+
+    .profile-order-item span {
+        line-height: 1.6;
+    }
+
+    .profile-order-details {
+        gap: 18px 10px;
+    }
+
+    .profile-order-details span,
+    .profile-order-shipping span {
+        font-size: 10px;
+    }
+
+    .profile-order-details p,
+    .profile-order-shipping p {
+        font-size: 12px;
+    }
+}
+
+/* ========================================
+   ORDER STATUS BADGES
+======================================== */
+
+.profile-status-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.4;
+}
+
+/* Paid, confirmed, delivered */
+.profile-status-badge.status-success {
+    color: #15803d;
+    background-color: #dcfce7;
+}
+
+/* Pending, processing */
+.profile-status-badge.status-pending {
+    color: #92400e;
+    background-color: #fef3c7;
+}
+
+/* Shipped */
+.profile-status-badge.status-shipped {
+    color: #0369a1;
+    background-color: #e0f2fe;
+}
+
+/* Failed, cancelled, returned */
+.profile-status-badge.status-danger {
+    color: #b91c1c;
+    background-color: #fee2e2;
+}
+
+/* Refunded */
+.profile-status-badge.status-refunded {
+    color: #6d28d9;
+    background-color: #ede9fe;
+}
+
+/* Unknown or new statuses */
+.profile-status-badge.status-unknown {
+    color: #475569;
+    background-color: #f1f5f9;
+}
+/* ========================================
+   PROFILE EDIT FORM
+======================================== */
+
+.profile-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.profile-section-heading h2 {
+    margin: 0;
+}
+
+.profile-edit-button,
+.profile-save-button {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.profile-edit-button:hover,
+.profile-save-button:hover:not(:disabled) {
+    background-color: #000c11;
+}
+
+.profile-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 560px;
+}
+
+.profile-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.profile-edit-field label {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.profile-edit-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #0f172a;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-edit-field input:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.profile-edit-field input:disabled,
+.profile-edit-field input:read-only {
+    background-color: #f8fafc;
+    color: #64748b;
+    cursor: not-allowed;
+}
+
+.profile-edit-field small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.profile-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.profile-cancel-button {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 18px;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.profile-cancel-button:hover:not(:disabled) {
+    background-color: #f8fafc;
+}
+
+.profile-save-button:disabled,
+.profile-cancel-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.profile-message {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.profile-message-success {
+    border: 1px solid #bbf7d0;
+    background-color: #f0fdf4;
+    color: #166534;
+}
+
+.profile-message-error {
+    border: 1px solid #fecaca;
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+@media (max-width: 480px) {
+    .profile-section-heading {
+        align-items: flex-start;
+    }
+
+    .profile-edit-button {
+        flex-shrink: 0;
+        padding: 9px 12px;
+        font-size: 12px;
+    }
+
+    .profile-edit-actions {
+        flex-direction: column;
+    }
+
+    .profile-save-button,
+    .profile-cancel-button {
+        width: 100%;
+    }
+}

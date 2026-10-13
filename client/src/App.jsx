@@ -9,6 +9,9 @@ import Home from "./pages/customer/Home";
 import CustomerProducts  from "./pages/customer/Products";
 import ProductDetails from "./pages/customer/ProductDetails";
 import Cart from "./pages/customer/Cart";
+import Checkout from "./pages/customer/Checkout";
+import OrderSuccess from "./pages/customer/OrderSuccess";
+import Profile from "./pages/customer/Profile";
 
 
 //admin
@@ -39,6 +42,9 @@ function App() {
         <Route path="/products" element={<CustomerProducts  />} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/profile" element={<Profile />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/verify-otp" element={<AdminOtpVerification />}/>

@@ -254,6 +254,99 @@ const customerLoginUser = async (req, res) => {
     }
 };
 
+
+const getCustomerProfile = async (req, res) => {
+    try {
+        // Only customers can access this profile endpoint.
+        if (req.user.role !== "customer") {
+            return res.status(403).json({
+                message: "Access denied. Customer account required."
+            });
+        }
+
+        // Get the customer ID from the verified JWT.
+        const user = await User.findById(req.user.userId)
+            .select("name email phone role");
+
+        if (!user) {
+            return res.status(404).json({
+                message: "Customer not found"
+            });
+        }
+
+        // Return only the profile information needed by the frontend.
+        res.status(200).json({
+            message: "Profile retrieved successfully",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to retrieve customer profile"
+        });
+    }
+};
+
+async function updateCustomerProfile(req, res) {
+    try {
+        if (req.user.role !== "customer") {
+            return res.status(403).json({
+                message: "Access denied. Customers only."
+            });
+        }
+
+        const { name, phone } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({
+                message: "Full name is required."
+            });
+        }
+
+        if (!phone || !phone.trim()) {
+            return res.status(400).json({
+                message: "Phone number is required."
+            });
+        }
+
+        const user = await User.findById(req.user.userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "Customer not found."
+            });
+        }
+
+        user.name = name.trim();
+        user.phone = phone.trim();
+
+        await user.save();
+
+        return res.status(200).json({
+            message: "Profile updated successfully.",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error("Update customer profile error:", error);
+
+        return res.status(500).json({
+            message: "Failed to update profile."
+        });
+    }
+}
+
+
 const verifyAdminOtpUser = async (req, res) => {
     try {
         const { email, otp } = req.body;
@@ -285,4 +378,15 @@ const verifyAdminOtpUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, verifyEmail, forgotPassword, resetPassword, resendOtp, adminLoginUser, verifyAdminOtpUser, customerLoginUser };
+module.exports = {
+    registerUser,
+    verifyEmail,
+    forgotPassword,
+    resetPassword,
+    resendOtp,
+    adminLoginUser,
+    verifyAdminOtpUser,
+    customerLoginUser,
+    getCustomerProfile,
+    updateCustomerProfile
+};

@@ -4,6 +4,7 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const {
     getOrders,
+    getCustomerOrdersController,
     getOrderByIdController,
     updateOrderStatusController,
     createCustomerOrderController
@@ -12,6 +13,13 @@ const {
 const router = express.Router();
 
 router.get("/", getOrders);
+
+router.get(
+    "/my-orders",
+    authMiddleware,
+    roleMiddleware("customer"),
+    getCustomerOrdersController
+);
 
 router.get("/:id", getOrderByIdController);
 

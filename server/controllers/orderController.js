@@ -1,22 +1,43 @@
 const {
     getAllOrders,
+    getCustomerOrders,
     getOrderById,
-    updateOrderStatus
+    updateOrderStatus,
+    createCustomerOrder
 } = require("../services/orderService");
 
 async function getOrders(req, res) {
     try {
         const orders = await getAllOrders();
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Orders fetched successfully",
             data: orders
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to fetch orders"
+        });
+    }
+}
+
+async function getCustomerOrdersController(req, res) {
+    try {
+        const userId = req.user.userId;
+
+        const orders = await getCustomerOrders(userId);
+
+        return res.status(200).json({
+            message: "Customer orders fetched successfully",
+            data: orders
+        });
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Failed to fetch your orders"
         });
     }
 }
@@ -33,14 +54,20 @@ async function getOrderByIdController(req, res) {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Order fetched successfully",
             data: order
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
-        res.status(500).json({
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                message: "Invalid order ID"
+            });
+        }
+
+        return res.status(500).json({
             message: "Failed to fetch order"
         });
     }
@@ -84,26 +111,27 @@ async function updateOrderStatusController(req, res) {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Order status updated successfully",
             data: order
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
-        if (error.name === "ValidationError") {
+        if (
+            error.name === "ValidationError" ||
+            error.name === "CastError"
+        ) {
             return res.status(400).json({
-                message: "Invalid order status"
+                message: "Invalid order ID or order status"
             });
         }
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to update order status"
         });
     }
 }
-
-const { createCustomerOrder } = require("../services/orderService");
 
 async function createCustomerOrderController(req, res) {
     try {
@@ -137,6 +165,7 @@ async function createCustomerOrderController(req, res) {
 
         const clientErrors = [
             "Invalid payment method",
+            "Use the payment API for Razorpay orders",
             "Address not found",
             "Your cart is empty",
             "A cart item is no longer available",
@@ -159,6 +188,7 @@ async function createCustomerOrderController(req, res) {
 
 module.exports = {
     getOrders,
+    getCustomerOrdersController,
     getOrderByIdController,
     updateOrderStatusController,
     createCustomerOrderController
