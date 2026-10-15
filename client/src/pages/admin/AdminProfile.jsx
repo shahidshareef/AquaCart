@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 
@@ -35,7 +36,7 @@ function AdminProfile() {
             setMessageType("");
             setLoading(true);
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/profile"
             );
 
@@ -126,7 +127,7 @@ function AdminProfile() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/profile",
                 {
                     method: "PUT",
@@ -210,7 +211,7 @@ function AdminProfile() {
         try {
             setChangingPassword(true);
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/profile/password",
                 {
                     method: "PUT",

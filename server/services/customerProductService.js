@@ -423,7 +423,8 @@ async function getRelatedProducts(productId) {
 
 async function getProductReviews(productId) {
     const reviews = await Review.find({
-        product: productId
+        product: productId,
+        status: "approved"
     })
         .populate("user", "name")
         .sort({

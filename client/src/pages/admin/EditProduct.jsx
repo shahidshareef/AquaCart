@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
@@ -29,7 +30,7 @@ function EditProduct() {
 
             try {
 
-                const productResponse = await fetch(
+                const productResponse = await adminFetch(
                     `http://localhost:5000/api/admin/products/${id}`
                 );
 
@@ -48,7 +49,7 @@ function EditProduct() {
                 setCategory(productData.data.category?._id || "");
 
 
-                const variantResponse = await fetch(
+                const variantResponse = await adminFetch(
                     `http://localhost:5000/api/admin/products/${id}/variants`
                 );
 
@@ -63,7 +64,7 @@ function EditProduct() {
                 setVariants(variantData.data);
 
 
-                const categoryResponse = await fetch(
+                const categoryResponse = await adminFetch(
                     "http://localhost:5000/api/admin/categories"
                 );
 
@@ -149,7 +150,7 @@ function EditProduct() {
 
             // Update Product
 
-            const productResponse = await fetch(
+            const productResponse = await adminFetch(
                 `http://localhost:5000/api/admin/products/${id}`,
                 {
                     method: "PUT",
@@ -170,7 +171,7 @@ function EditProduct() {
 
             for (const variant of variants) {
 
-                const variantResponse = await fetch(
+                const variantResponse = await adminFetch(
                     `http://localhost:5000/api/admin/products/variants/${variant._id}`,
                     {
                         method: "PUT",

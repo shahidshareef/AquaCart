@@ -1,0 +1,132 @@
+const path = require("path");
+const fs = require("fs");
+
+const {
+    getReviewEligibility,
+    submitReview,
+    getPublishedReviews,
+    getAdminReviews,
+    moderateReview
+} = require("../services/reviewService");
+
+function sendError(res, error) {
+    const statusCode = error.statusCode || 500;
+
+    // Log the actual error so backend failures can be diagnosed.
+    console.error("[AquaCart Reviews API Error]", {
+        message: error.message,
+        statusCode,
+        stack: error.stack
+    });
+
+    return res.status(statusCode).json({
+        message: statusCode === 500
+            ? "Review request failed."
+            : error.message
+    });
+}
+
+async function getReviewEligibilityController(req, res) {
+    try {
+        const data = await getReviewEligibility(
+            req.user.userId,
+            req.params.productId
+        );
+
+        return res.status(200).json({
+            message: "Review eligibility checked successfully",
+            data
+        });
+    } catch (error) {
+        return sendError(res, error);
+    }
+}
+
+async function submitReviewController(req, res) {
+    try {
+        const imagePaths = (req.files || []).map(
+            (file) => `/uploads/${file.filename}`
+        );
+
+        const review = await submitReview(
+            req.user.userId,
+            req.body || {},
+            imagePaths
+        );
+
+        return res.status(201).json({
+            message: "Review submitted and is awaiting admin approval.",
+            data: review
+        });
+    } catch (error) {
+        // Remove files uploaded for a submission that failed.
+        for (const file of req.files || []) {
+            if (file.path) {
+                fs.unlink(path.resolve(file.path), (unlinkError) => {
+                    if (unlinkError) {
+                        console.error(
+                            "[AquaCart] Failed to remove rejected review upload:",
+                            unlinkError.message
+                        );
+                    }
+                });
+            }
+        }
+
+        return sendError(res, error);
+    }
+}
+
+async function getPublishedReviewsController(req, res) {
+    try {
+        const reviews = await getPublishedReviews(req.query.rating);
+
+        return res.status(200).json({
+            message: "Customer reviews fetched successfully.",
+            data: reviews
+        });
+    } catch (error) {
+        return sendError(res, error);
+    }
+}
+
+async function getAdminReviewsController(req, res) {
+    try {
+        const reviews = await getAdminReviews(req.query.status);
+
+        return res.status(200).json({
+            message: "Reviews fetched successfully",
+            data: reviews
+        });
+    } catch (error) {
+        return sendError(res, error);
+    }
+}
+
+async function moderateReviewController(req, res) {
+    try {
+        const { status, moderationNote } = req.body || {};
+
+        const review = await moderateReview(
+            req.params.id,
+            req.user.userId,
+            status,
+            moderationNote
+        );
+
+        return res.status(200).json({
+            message: `Review ${status} successfully`,
+            data: review
+        });
+    } catch (error) {
+        return sendError(res, error);
+    }
+}
+
+module.exports = {
+    getReviewEligibilityController,
+    submitReviewController,
+    getPublishedReviewsController,
+    getAdminReviewsController,
+    moderateReviewController
+};

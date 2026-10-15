@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 
@@ -17,7 +18,7 @@ function Inventory() {
     useEffect(function () {
         async function getInventory() {
             try {
-                const response = await fetch(
+                const response = await adminFetch(
                     "http://localhost:5000/api/admin/inventory"
                 );
 
@@ -95,7 +96,7 @@ function Inventory() {
         setMessage("");
 
         try {
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/inventory/${variantId}/stock`,
                 {
                     method: "PUT",

@@ -1,33 +1,35 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 //user
-import Register from "./pages/customer/Register";
-import Login from "./pages/customer/Login";
-import EmailVerification from "./pages/customer/EmailVerification";
-import ForgotPassword from "./pages/customer/ForgotPassword";
-import SetNewPassword from "./pages/customer/SetNewPassword";
-import Home from "./pages/customer/Home";
-import CustomerProducts  from "./pages/customer/Products";
-import ProductDetails from "./pages/customer/ProductDetails";
-import Cart from "./pages/customer/Cart";
-import Checkout from "./pages/customer/Checkout";
-import OrderSuccess from "./pages/customer/OrderSuccess";
-import Profile from "./pages/customer/Profile";
+import Register from "./pages/customer/Register.jsx";
+import Login from "./pages/customer/Login.jsx";
+import EmailVerification from "./pages/customer/EmailVerification.jsx";
+import ForgotPassword from "./pages/customer/ForgotPassword.jsx";
+import SetNewPassword from "./pages/customer/SetNewPassword.jsx";
+import Home from "./pages/customer/Home.jsx";
+import CustomerProducts  from "./pages/customer/Products.jsx";
+import ProductDetails from "./pages/customer/ProductDetails.jsx";
+import Cart from "./pages/customer/Cart.jsx";
+import Checkout from "./pages/customer/Checkout.jsx";
+import OrderSuccess from "./pages/customer/OrderSuccess.jsx";
+import Profile from "./pages/customer/Profile.jsx";
+import CustomerReviews from "./pages/customer/Reviews.jsx";
 
 
 //admin
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminOtpVerification from "./pages/admin/AdminOtpVerification";
-import AdminSetNewPassword from "./pages/admin/AdminSetNewPassword";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import Categories from "./pages/admin/Categories";
-import Products from "./pages/admin/Products";
-import AddProduct from "./pages/admin/AddProduct";
-import EditProduct from "./pages/admin/EditProduct";
-import Inventory from "./pages/admin/Inventory";
-import Coupons from "./pages/admin/Coupons";
-import Orders from "./pages/admin/Orders";
-import Customers from "./pages/admin/Customers";
-import AdminProfile from "./pages/admin/AdminProfile";
+import AdminLogin from "./pages/admin/AdminLogin.jsx";
+import AdminOtpVerification from "./pages/admin/AdminOtpVerification.jsx";
+import AdminSetNewPassword from "./pages/admin/AdminSetNewPassword.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import Categories from "./pages/admin/Categories.jsx";
+import Products from "./pages/admin/Products.jsx";
+import AddProduct from "./pages/admin/AddProduct.jsx";
+import EditProduct from "./pages/admin/EditProduct.jsx";
+import Inventory from "./pages/admin/Inventory.jsx";
+import Coupons from "./pages/admin/Coupons.jsx";
+import Orders from "./pages/admin/Orders.jsx";
+import Customers from "./pages/admin/Customers.jsx";
+import AdminProfile from "./pages/admin/AdminProfile.jsx";
+import Reviews from "./pages/admin/Reviews.jsx";
 
 function App() {
     return (
@@ -45,6 +47,7 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/reviews" element={<CustomerReviews />} />
 
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/verify-otp" element={<AdminOtpVerification />}/>
@@ -59,6 +62,7 @@ function App() {
         <Route path="/admin/orders" element={<Orders />}/>
         <Route path="/admin/customers" element={<Customers />}/>
         <Route path="/admin/profile" element={<AdminProfile />}/>
+        <Route path="/admin/reviews" element={<Reviews />} />
     </Routes>
 </BrowserRouter>
     );

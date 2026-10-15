@@ -551,3 +551,738 @@
         width: 100%;
     }
 }
+/* ========================================
+   PROFILE PASSWORD SECTION
+======================================== */
+
+.profile-password-area {
+    max-width: 560px;
+    margin-top: 30px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.profile-password-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.profile-password-heading h3,
+.profile-address-edit h3 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.profile-password-heading p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.profile-secondary-button {
+    flex-shrink: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 14px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.profile-secondary-button:hover:not(:disabled) {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+}
+
+.profile-secondary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   ADDRESS BOOK
+======================================== */
+
+.profile-address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profile-address-card {
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.profile-address-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.profile-address-heading > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-address-name {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.profile-default-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 20px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.profile-address-card p {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+/* ========================================
+   ADDRESS EDIT FORM
+======================================== */
+
+.profile-address-edit {
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.profile-address-edit h3 {
+    margin-bottom: 20px;
+}
+
+.profile-address-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.profile-default-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.profile-default-checkbox input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #0ea5e9;
+    cursor: pointer;
+}
+
+.profile-default-checkbox input:disabled {
+    cursor: not-allowed;
+}
+
+/* ========================================
+   ORDER HISTORY CONTROLS
+======================================== */
+
+.profile-section-heading {
+    flex-wrap: wrap;
+}
+
+.profile-section-heading > h2 {
+    margin-bottom: 0;
+}
+
+.profile-section-heading > button {
+    flex-shrink: 0;
+}
+
+/* ========================================
+   RESPONSIVE PROFILE ADDITIONS
+======================================== */
+
+@media (max-width: 768px) {
+    .profile-address-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-address-edit {
+        padding: 18px;
+    }
+
+    .profile-password-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-address-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-address-heading .profile-secondary-button {
+        width: 100%;
+    }
+
+    .profile-password-heading .profile-secondary-button {
+        width: 100%;
+    }
+
+    .profile-address-edit {
+        padding: 14px;
+    }
+
+    .profile-section-heading {
+        gap: 12px;
+    }
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.profile-logout-button {
+    padding: 11px 22px;
+    border: 1px solid #dc2626;
+    border-radius: 8px;
+    background-color: #dc2626;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease,
+                border-color 0.2s ease;
+}
+
+.profile-logout-button:hover {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+}
+
+.profile-logout-button:focus-visible {
+    outline: 3px solid #fecaca;
+    outline-offset: 3px;
+}
+
+/* ========================================
+   ORDER CANCELLATION / RETURN ACTIONS
+======================================== */
+
+.profile-order-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.profile-order-cancel-button,
+.profile-order-return-button {
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.profile-order-cancel-button {
+    border: 1px solid #fecaca;
+    background: #fff;
+    color: #b91c1c;
+}
+
+.profile-order-cancel-button:hover {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.profile-order-return-button {
+    border: 1px solid #bae6fd;
+    background: #fff;
+    color: #0369a1;
+}
+
+.profile-order-return-button:hover {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+}
+
+.profile-refund-notice,
+.profile-return-status {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 9px;
+    border: 1px solid;
+}
+
+.profile-refund-notice strong,
+.profile-return-status span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.profile-refund-notice p,
+.profile-return-status p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.profile-refund-notice-pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.profile-refund-notice-success {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.profile-refund-notice-danger {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.profile-return-status {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+}
+
+.profile-return-status span {
+    color: #64748b;
+}
+
+/* ========================================
+   ORDER ACTION MODAL
+======================================== */
+
+.profile-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.profile-action-modal {
+    width: min(100%, 560px);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.profile-action-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-action-modal-header h2 {
+    margin: 0 0 5px;
+    color: #0f172a;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.profile-action-modal-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.profile-modal-close-button {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.profile-modal-close-button:hover:not(:disabled) {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.profile-modal-close-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.profile-action-modal-body {
+    padding: 24px;
+}
+
+.profile-confirmation-box,
+.profile-refund-info-box {
+    margin-bottom: 18px;
+    padding: 15px 16px;
+    border: 1px solid;
+    border-radius: 9px;
+}
+
+.profile-confirmation-box strong,
+.profile-refund-info-box strong {
+    display: block;
+    margin-bottom: 6px;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.profile-confirmation-box p,
+.profile-refund-info-box p {
+    margin: 0;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.profile-confirmation-danger {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.profile-confirmation-info {
+    border-color: #bae6fd;
+    background: #f0f9ff;
+    color: #075985;
+}
+
+.profile-refund-info-box {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.profile-refund-info-neutral {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.profile-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 18px;
+}
+
+.profile-modal-field label {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.profile-modal-field label span {
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.profile-modal-field textarea,
+.profile-modal-field select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-modal-field textarea {
+    min-height: 100px;
+    padding: 12px 14px;
+    resize: vertical;
+}
+
+.profile-modal-field select {
+    padding: 12px 14px;
+}
+
+.profile-modal-field textarea:focus,
+.profile-modal-field select:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.profile-modal-field textarea:disabled,
+.profile-modal-field select:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+.profile-modal-field small {
+    color: #94a3b8;
+    font-size: 11px;
+    text-align: right;
+}
+
+.profile-modal-error {
+    margin: 18px 0 0;
+    padding: 11px 13px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.profile-action-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.profile-modal-primary-button,
+.profile-modal-danger-button {
+    border: none;
+    border-radius: 8px;
+    padding: 11px 16px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.profile-modal-primary-button {
+    background: #0ea5e9;
+}
+
+.profile-modal-primary-button:hover:not(:disabled) {
+    background: #0284c7;
+}
+
+.profile-modal-danger-button {
+    background: #dc2626;
+}
+
+.profile-modal-danger-button:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.profile-modal-primary-button:disabled,
+.profile-modal-danger-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .profile-return-status {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-order-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-order-cancel-button,
+    .profile-order-return-button {
+        width: 100%;
+    }
+
+    .profile-modal-backdrop {
+        align-items: flex-end;
+        padding: 10px;
+    }
+
+    .profile-action-modal {
+        max-height: calc(100vh - 20px);
+        border-radius: 12px;
+    }
+
+    .profile-action-modal-header,
+    .profile-action-modal-body,
+    .profile-action-modal-footer {
+        padding: 18px;
+    }
+
+    .profile-action-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .profile-action-modal-footer button {
+        width: 100%;
+    }
+}
+
+
+/* ========================================
+   ORDER PRODUCT REVIEW ACTIONS
+======================================== */
+
+.profile-order-item-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-order-review-area {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.profile-write-review-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 9px 14px;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    background: #0ea5e9;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.profile-write-review-button:hover {
+    border-color: #0284c7;
+    background: #0284c7;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.profile-review-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.profile-review-status-pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.profile-review-status-approved {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.profile-review-status-rejected {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+    .profile-order-item-main {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-order-review-area {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-order-item {
+        align-items: flex-start;
+    }
+
+    .profile-order-item-main,
+    .profile-order-review-area {
+        width: 100%;
+    }
+
+    .profile-write-review-button,
+    .profile-review-status {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .profile-order-item-price {
+        flex-shrink: 0;
+    }
+}

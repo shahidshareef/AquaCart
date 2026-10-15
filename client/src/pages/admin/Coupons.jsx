@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 
@@ -30,7 +31,7 @@ function Coupons() {
     useEffect(function () {
         async function getCoupons() {
             try {
-                const response = await fetch(
+                const response = await adminFetch(
                     "http://localhost:5000/api/admin/coupons"
                 );
 
@@ -208,7 +209,7 @@ function Coupons() {
 
             if (editingCouponId) {
 
-                response = await fetch(
+                response = await adminFetch(
                     `http://localhost:5000/api/admin/coupons/${editingCouponId}`,
                     {
                         method: "PUT",
@@ -221,7 +222,7 @@ function Coupons() {
 
             } else {
 
-                response = await fetch(
+                response = await adminFetch(
                     "http://localhost:5000/api/admin/coupons",
                     {
                         method: "POST",
@@ -321,7 +322,7 @@ function Coupons() {
 
         try {
 
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/coupons/${deleteCouponId}`,
                 {
                     method: "DELETE"

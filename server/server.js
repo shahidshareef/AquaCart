@@ -20,6 +20,9 @@ const cartRoutes = require("./routes/cartRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const authMiddleware = require("./middleware/authMiddleware");
+const roleMiddleware = require("./middleware/roleMiddleware");
 
 
 const app = express();
@@ -28,21 +31,22 @@ const app = express();
     app.use(express.json());
     app.use("/uploads", express.static("uploads"));
     app.use("/api/auth/", authRoutes)
-    app.use("/api/admin", adminDashboardRoutes);
-    app.use("/api/admin/categories", categoryRoutes);
-    app.use("/api/admin/products", productRoutes);
-    app.use("/api/admin/products", productVariantRoutes);
-    app.use("/api/admin/inventory", inventoryRoutes);
-    app.use("/api/admin/coupons", couponRoutes);
-    app.use("/api/admin/orders", orderRoutes);
-    app.use("/api/admin/customers", customerRoutes);
-    app.use("/api/admin/profile", adminProfileRoutes);
+    app.use("/api/admin", authMiddleware, roleMiddleware("admin"), adminDashboardRoutes);
+    app.use("/api/admin/categories", authMiddleware, roleMiddleware("admin"), categoryRoutes);
+    app.use("/api/admin/products", authMiddleware, roleMiddleware("admin"), productRoutes);
+    app.use("/api/admin/products", authMiddleware, roleMiddleware("admin"), productVariantRoutes);
+    app.use("/api/admin/inventory", authMiddleware, roleMiddleware("admin"), inventoryRoutes);
+    app.use("/api/admin/coupons", authMiddleware, roleMiddleware("admin"), couponRoutes);
+    app.use("/api/admin/orders", authMiddleware, roleMiddleware("admin"), orderRoutes);
+    app.use("/api/admin/customers", authMiddleware, roleMiddleware("admin"), customerRoutes);
+    app.use("/api/admin/profile", authMiddleware, roleMiddleware("admin"), adminProfileRoutes);
     app.use("/api/products", customerProductRoutes);
     app.use("/api/cart", cartRoutes);
     app.use("/api/addresses", addressRoutes);
     app.use("/api/checkout", checkoutRoutes);
     app.use("/api/orders", orderRoutes);
     app.use("/api/payments", paymentRoutes);
+    app.use("/api/reviews", reviewRoutes);
 
     
 const PORT = process.env.PORT || 5000;

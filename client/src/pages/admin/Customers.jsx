@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 
@@ -28,7 +29,7 @@ function Customers() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/customers"
             );
 
@@ -60,7 +61,7 @@ function Customers() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/customers/${customerId}`
             );
 
@@ -112,7 +113,7 @@ function Customers() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/customers/${selectedCustomer._id}/status`,
                 {
                     method: "PATCH",

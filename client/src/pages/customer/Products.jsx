@@ -26,7 +26,7 @@ function Products() {
         async function fetchCategories() {
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/admin/categories"
+                    "http://localhost:5000/api/products/categories"
                 );
 
                 const result = await response.json();

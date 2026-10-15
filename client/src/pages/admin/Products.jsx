@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
@@ -40,7 +41,7 @@ function Products() {
 
         try {
 
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/products/${productId}`,
                 {
                     method: "DELETE"
@@ -105,7 +106,7 @@ function Products() {
 
         async function getProducts() {
             try {
-                const response = await fetch(
+                const response = await adminFetch(
                     "http://localhost:5000/api/admin/products"
                 );
 
@@ -118,7 +119,7 @@ function Products() {
                 const productsWithVariants = await Promise.all(
                     data.data.map(async function (product) {
 
-                        const variantResponse = await fetch(
+                        const variantResponse = await adminFetch(
                             `http://localhost:5000/api/admin/products/${product._id}/variants`
                         );
 
@@ -154,7 +155,7 @@ function Products() {
 
         async function getCategories() {
             try {
-                const response = await fetch(
+                const response = await adminFetch(
                     "http://localhost:5000/api/admin/categories"
                 );
 

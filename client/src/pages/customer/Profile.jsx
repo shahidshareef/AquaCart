@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 import "../../styles/Profile.css";
 
+const emptyAddress = {
+    fullName: "",
+    phone: "",
+    addressLine: "",
+    city: "",
+    state: "",
+    pincode: "",
+    isDefault: false,
+};
+
 function Profile() {
+    const navigate = useNavigate();
+
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -14,16 +26,73 @@ function Profile() {
     const [addressError, setAddressError] = useState("");
 
     const [orders, setOrders] = useState([]);
-    const [orderLoading, setOrderLoading] = useState(true);
+    const [orderLoading, setOrderLoading] = useState(false);
     const [orderError, setOrderError] = useState("");
+    const [showOrders, setShowOrders] = useState(false);
+    const [ordersFetched, setOrdersFetched] = useState(false);
 
-    // Edit Profile state
+    // Profile editing
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState("");
     const [editPhone, setEditPhone] = useState("");
+    const [editEmail, setEditEmail] = useState("");
+    const [emailCurrentPassword, setEmailCurrentPassword] =
+        useState("");
     const [savingProfile, setSavingProfile] = useState(false);
     const [profileMessage, setProfileMessage] = useState("");
     const [profileMessageType, setProfileMessageType] = useState("");
+
+    // Password changing
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [savingPassword, setSavingPassword] = useState(false);
+    const [passwordMessage, setPasswordMessage] = useState("");
+    const [passwordMessageType, setPasswordMessageType] = useState("");
+
+    // Address editing
+    const [editingAddress, setEditingAddress] = useState(null);
+    const [addressForm, setAddressForm] = useState(emptyAddress);
+    const [savingAddress, setSavingAddress] = useState(false);
+    const [addressFormMessage, setAddressFormMessage] = useState("");
+    const [addressFormMessageType, setAddressFormMessageType] =
+        useState("");
+
+    // Order cancellation / return request flow
+    const [selectedOrderAction, setSelectedOrderAction] = useState(null);
+    const [orderActionType, setOrderActionType] = useState("");
+    const [orderActionReason, setOrderActionReason] = useState("");
+    const [orderActionDetails, setOrderActionDetails] = useState("");
+    const [orderActionLoading, setOrderActionLoading] = useState(false);
+    const [orderActionError, setOrderActionError] = useState("");
+
+    const getToken = () => localStorage.getItem("token");
+
+    const getErrorMessage = async (response, fallbackMessage) => {
+        try {
+            const data = await response.json();
+            return data.message || fallbackMessage;
+        } catch {
+            return fallbackMessage;
+        }
+    };
+
+    // Log out the customer and update the common header.
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        setUser(null);
+        setAddresses([]);
+        setOrders([]);
+        setOrdersFetched(false);
+        setShowOrders(false);
+
+        window.dispatchEvent(new Event("userUpdated"));
+
+        navigate("/login", { replace: true });
+    };
 
     useEffect(() => {
         const fetchAddresses = async (token) => {
@@ -31,20 +100,22 @@ function Profile() {
                 const response = await fetch(
                     "http://localhost:5000/api/addresses",
                     {
-                        method: "GET",
                         headers: {
                             Authorization: `Bearer ${token}`,
                         },
                     }
                 );
 
-                const data = await response.json();
-
                 if (!response.ok) {
                     throw new Error(
-                        data.message || "Failed to load addresses."
+                        await getErrorMessage(
+                            response,
+                            "Failed to load addresses."
+                        )
                     );
                 }
+
+                const data = await response.json();
 
                 const savedAddresses = Array.isArray(data)
                     ? data
@@ -62,76 +133,45 @@ function Profile() {
             }
         };
 
-        const fetchOrders = async (token) => {
-            try {
-                const response = await fetch(
-                    "http://localhost:5000/api/orders/my-orders",
-                    {
-                        method: "GET",
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(
-                        data.message || "Failed to load order history."
-                    );
-                }
-
-                setOrders(Array.isArray(data.data) ? data.data : []);
-            } catch (error) {
-                setOrderError(error.message);
-            } finally {
-                setOrderLoading(false);
-            }
-        };
-
         const fetchProfile = async () => {
+            const token = getToken();
+
+            if (!token) {
+                setError("Please log in to view your profile.");
+                setAddressError("Please log in to view your addresses.");
+                setAddressLoading(false);
+                setLoading(false);
+                return;
+            }
+
+            fetchAddresses(token);
+
             try {
-                const token = localStorage.getItem("token");
-
-                if (!token) {
-                    setError("Please log in to view your profile.");
-                    setAddressError(
-                        "Please log in to view your addresses."
-                    );
-                    setOrderError(
-                        "Please log in to view your order history."
-                    );
-
-                    setAddressLoading(false);
-                    setOrderLoading(false);
-                    return;
-                }
-
-                fetchAddresses(token);
-                fetchOrders(token);
-
                 const response = await fetch(
                     "http://localhost:5000/api/auth/profile",
                     {
-                        method: "GET",
                         headers: {
                             Authorization: `Bearer ${token}`,
                         },
                     }
                 );
 
-                const data = await response.json();
-
                 if (!response.ok) {
                     throw new Error(
-                        data.message || "Failed to load profile."
+                        await getErrorMessage(
+                            response,
+                            "Failed to load profile."
+                        )
                     );
                 }
 
-                setUser(data.user);
-                setEditName(data.user.name || "");
-                setEditPhone(data.user.phone || "");
+                const data = await response.json();
+                const profileUser = data.user;
+
+                setUser(profileUser);
+                setEditName(profileUser.name || "");
+                setEditPhone(profileUser.phone || "");
+                setEditEmail(profileUser.email || "");
             } catch (error) {
                 setError(error.message);
             } finally {
@@ -219,45 +259,75 @@ function Profile() {
         }
     };
 
-    // Open the form and fill it with the current profile information.
+    // Open profile editing and populate the current values.
     const handleEditProfile = () => {
         setEditName(user?.name || "");
         setEditPhone(user?.phone || "");
+        setEditEmail(user?.email || "");
+        setEmailCurrentPassword("");
         setProfileMessage("");
+        setProfileMessageType("");
+        setPasswordMessage("");
+        setPasswordMessageType("");
+        setShowPasswordForm(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
         setIsEditing(true);
     };
 
-    // Close the form without saving any changes.
     const handleCancelEdit = () => {
         setEditName(user?.name || "");
         setEditPhone(user?.phone || "");
+        setEditEmail(user?.email || "");
+        setEmailCurrentPassword("");
         setProfileMessage("");
+        setProfileMessageType("");
+        setPasswordMessage("");
+        setPasswordMessageType("");
+        setShowPasswordForm(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
         setIsEditing(false);
     };
 
-    // Save the edited name and phone number to the backend.
     const handleSaveProfile = async (event) => {
         event.preventDefault();
 
         const name = editName.trim();
         const phone = editPhone.trim();
+        const email = editEmail.trim().toLowerCase();
+        const emailIsChanging =
+            email !== (user?.email || "").toLowerCase();
 
-        if (!name || !phone) {
-            setProfileMessage("Name and phone number are required.");
+        if (!name || !phone || !email) {
+            setProfileMessage(
+                "Name, phone number, and email are required."
+            );
             setProfileMessageType("error");
             return;
         }
 
-        const token = localStorage.getItem("token");
+        if (emailIsChanging && !emailCurrentPassword) {
+            setProfileMessage(
+                "Enter your current password to change your email."
+            );
+            setProfileMessageType("error");
+            return;
+        }
+
+        const token = getToken();
 
         if (!token) {
-            setProfileMessage("Please log in again to update your profile.");
+            setProfileMessage("Please log in again.");
             setProfileMessageType("error");
             return;
         }
 
         setSavingProfile(true);
         setProfileMessage("");
+        setProfileMessageType("");
 
         try {
             const response = await fetch(
@@ -271,26 +341,33 @@ function Profile() {
                     body: JSON.stringify({
                         name,
                         phone,
+                        email,
+                        currentPassword: emailIsChanging
+                            ? emailCurrentPassword
+                            : undefined,
                     }),
                 }
             );
 
-            const data = await response.json();
-
             if (!response.ok) {
                 throw new Error(
-                    data.message || "Failed to update profile."
+                    await getErrorMessage(
+                        response,
+                        "Failed to update profile."
+                    )
                 );
             }
 
-            setUser(data.user);
+            const data = await response.json();
 
+            setUser(data.user);
             localStorage.setItem("user", JSON.stringify(data.user));
             window.dispatchEvent(new Event("userUpdated"));
 
             setEditName(data.user.name || "");
             setEditPhone(data.user.phone || "");
-            setIsEditing(false);
+            setEditEmail(data.user.email || "");
+            setEmailCurrentPassword("");
             setProfileMessage(
                 data.message || "Profile updated successfully."
             );
@@ -300,6 +377,487 @@ function Profile() {
             setProfileMessageType("error");
         } finally {
             setSavingProfile(false);
+        }
+    };
+
+    const handleChangePassword = async (event) => {
+        event.preventDefault();
+
+        setPasswordMessage("");
+        setPasswordMessageType("");
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            setPasswordMessage("Please complete all password fields.");
+            setPasswordMessageType("error");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordMessage("The new passwords do not match.");
+            setPasswordMessageType("error");
+            return;
+        }
+
+        const passwordPattern =
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+        if (!passwordPattern.test(newPassword)) {
+            setPasswordMessage(
+                "Use at least 8 characters, including uppercase and lowercase letters, a number, and a special character."
+            );
+            setPasswordMessageType("error");
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setPasswordMessage("Please log in again.");
+            setPasswordMessageType("error");
+            return;
+        }
+
+        setSavingPassword(true);
+
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/auth/change-password",
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Failed to change password."
+                    )
+                );
+            }
+
+            const data = await response.json();
+
+            setPasswordMessage(
+                data.message || "Password changed successfully."
+            );
+            setPasswordMessageType("success");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setShowPasswordForm(false);
+        } catch (error) {
+            setPasswordMessage(error.message);
+            setPasswordMessageType("error");
+        } finally {
+            setSavingPassword(false);
+        }
+    };
+
+    // Fetch orders separately from the View/Hide toggle.
+    const loadOrders = async (forceReload = false) => {
+        if (orderLoading) {
+            return;
+        }
+
+        if (ordersFetched && !forceReload) {
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setOrderError("Please log in to view your order history.");
+            return;
+        }
+
+        setOrderLoading(true);
+        setOrderError("");
+
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/orders/my-orders",
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Failed to load order history."
+                    )
+                );
+            }
+
+            const data = await response.json();
+
+            setOrders(Array.isArray(data.data) ? data.data : []);
+            setOrdersFetched(true);
+        } catch (error) {
+            setOrderError(error.message);
+            setOrdersFetched(false);
+        } finally {
+            setOrderLoading(false);
+        }
+    };
+
+    // Toggle visibility without clearing the loaded orders.
+    const handleToggleOrders = () => {
+        if (showOrders) {
+            setShowOrders(false);
+            return;
+        }
+
+        setShowOrders(true);
+
+        if (!ordersFetched && !orderLoading) {
+            loadOrders();
+        }
+    };
+
+    const updateOrderInState = (updatedOrder) => {
+        if (!updatedOrder?._id) {
+            return;
+        }
+
+        setOrders((previousOrders) =>
+            previousOrders.map((order) =>
+                order._id === updatedOrder._id ? updatedOrder : order
+            )
+        );
+    };
+
+    const canCancelOrder = (order) =>
+        ["pending", "confirmed", "processing"].includes(
+            order?.orderStatus
+        );
+
+    const canRequestReturn = (order) => {
+        const returnStatus = order?.returnRequest?.status;
+
+        return (
+            order?.orderStatus === "delivered" &&
+            !["pending", "approved", "completed"].includes(returnStatus)
+        );
+    };
+
+    const getReturnStatusLabel = (status) => {
+        switch (status) {
+            case "pending":
+                return "Return request pending review";
+            case "approved":
+                return "Return request approved";
+            case "rejected":
+                return "Return request rejected";
+            case "completed":
+                return "Return completed";
+            default:
+                return "";
+        }
+    };
+
+    const getRefundNotice = (order) => {
+        if (!order?.refundStatus || order.refundStatus === "not_applicable") {
+            return "";
+        }
+
+        const amount = formatCurrency(order.refundAmount || 0);
+
+        switch (order.refundStatus) {
+            case "pending":
+                return `Refund of ${amount} is pending processing. It will be handled separately from the order cancellation.`;
+            case "processing":
+                return `Refund of ${amount} is being processed.`;
+            case "completed":
+                return `Refund of ${amount} has been completed.`;
+            case "failed":
+                return `Refund of ${amount} could not be completed yet. Please contact support.`;
+            default:
+                return "";
+        }
+    };
+
+    const openCancelOrderModal = (order) => {
+        setSelectedOrderAction(order);
+        setOrderActionType("cancel");
+        setOrderActionReason("");
+        setOrderActionDetails("");
+        setOrderActionError("");
+    };
+
+    const openReturnOrderModal = (order) => {
+        setSelectedOrderAction(order);
+        setOrderActionType("return");
+        setOrderActionReason("");
+        setOrderActionDetails("");
+        setOrderActionError("");
+    };
+
+    const closeOrderActionModal = (force = false) => {
+        if (orderActionLoading && !force) {
+            return;
+        }
+
+        setSelectedOrderAction(null);
+        setOrderActionType("");
+        setOrderActionReason("");
+        setOrderActionDetails("");
+        setOrderActionError("");
+    };
+
+    const handleCancelOrder = async () => {
+        if (!selectedOrderAction || !canCancelOrder(selectedOrderAction)) {
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setOrderActionError("Please log in again.");
+            return;
+        }
+
+        if (orderActionReason.trim().length > 500) {
+            setOrderActionError(
+                "Cancellation reason cannot exceed 500 characters."
+            );
+            return;
+        }
+
+        setOrderActionLoading(true);
+        setOrderActionError("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/api/orders/${selectedOrderAction._id}/cancel`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        reason: orderActionReason.trim(),
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Failed to cancel this order."
+                    )
+                );
+            }
+
+            const data = await response.json();
+            updateOrderInState(data.data);
+            setOrderActionLoading(false);
+            closeOrderActionModal(true);
+        } catch (error) {
+            setOrderActionError(error.message);
+        } finally {
+            setOrderActionLoading(false);
+        }
+    };
+
+    const handleReturnRequest = async () => {
+        if (
+            !selectedOrderAction ||
+            !canRequestReturn(selectedOrderAction)
+        ) {
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setOrderActionError("Please log in again.");
+            return;
+        }
+
+        if (!orderActionReason.trim()) {
+            setOrderActionError("Please select a return reason.");
+            return;
+        }
+
+        if (orderActionReason.trim().length > 200) {
+            setOrderActionError(
+                "Return reason cannot exceed 200 characters."
+            );
+            return;
+        }
+
+        if (orderActionDetails.trim().length > 1000) {
+            setOrderActionError(
+                "Return details cannot exceed 1000 characters."
+            );
+            return;
+        }
+
+        setOrderActionLoading(true);
+        setOrderActionError("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/api/orders/${selectedOrderAction._id}/return-request`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        reason: orderActionReason.trim(),
+                        details: orderActionDetails.trim(),
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Failed to submit the return request."
+                    )
+                );
+            }
+
+            const data = await response.json();
+            updateOrderInState(data.data);
+            setOrderActionLoading(false);
+            closeOrderActionModal(true);
+        } catch (error) {
+            setOrderActionError(error.message);
+        } finally {
+            setOrderActionLoading(false);
+        }
+    };
+
+    // Open the selected address in the existing address form.
+    const handleEditAddress = (address) => {
+        setEditingAddress(address);
+        setAddressForm({
+            fullName: address.fullName || "",
+            phone: address.phone || "",
+            addressLine: address.addressLine || "",
+            city: address.city || "",
+            state: address.state || "",
+            pincode: address.pincode || "",
+            isDefault: Boolean(address.isDefault),
+        });
+        setAddressFormMessage("");
+        setAddressFormMessageType("");
+    };
+
+    const handleAddressFieldChange = (event) => {
+        const { name, value, checked, type } = event.target;
+
+        setAddressForm((previous) => ({
+            ...previous,
+            [name]: type === "checkbox" ? checked : value,
+        }));
+    };
+
+    const handleCancelAddressEdit = () => {
+        setEditingAddress(null);
+        setAddressForm(emptyAddress);
+        setAddressFormMessage("");
+        setAddressFormMessageType("");
+    };
+
+    const handleSaveAddress = async (event) => {
+        event.preventDefault();
+
+        const requiredFields = [
+            "fullName",
+            "phone",
+            "addressLine",
+            "city",
+            "state",
+            "pincode",
+        ];
+
+        const hasMissingField = requiredFields.some(
+            (field) => !addressForm[field].trim()
+        );
+
+        if (hasMissingField) {
+            setAddressFormMessage("Please complete all address fields.");
+            setAddressFormMessageType("error");
+            return;
+        }
+
+        const token = getToken();
+
+        if (!token) {
+            setAddressFormMessage("Please log in again.");
+            setAddressFormMessageType("error");
+            return;
+        }
+
+        setSavingAddress(true);
+        setAddressFormMessage("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/api/addresses/${editingAddress._id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(addressForm),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Failed to update address."
+                    )
+                );
+            }
+
+            const data = await response.json();
+            const updatedAddress = data.data;
+
+            setAddresses((previous) =>
+                previous.map((address) =>
+                    address._id === updatedAddress._id
+                        ? updatedAddress
+                        : address.isDefault && updatedAddress.isDefault
+                            ? { ...address, isDefault: false }
+                            : address
+                )
+            );
+
+            setAddressFormMessage(
+                data.message || "Address updated successfully."
+            );
+            setAddressFormMessageType("success");
+            setEditingAddress(null);
+            setAddressForm(emptyAddress);
+        } catch (error) {
+            setAddressFormMessage(error.message);
+            setAddressFormMessageType("error");
+        } finally {
+            setSavingAddress(false);
         }
     };
 
@@ -316,11 +874,21 @@ function Profile() {
                     </div>
 
                     <div className="profile-header">
-                        <h1>My Profile</h1>
-                        <p>
-                            View your personal details, saved addresses,
-                            and order history.
-                        </p>
+                        <div>
+                            <h1>My Profile</h1>
+                            <p>
+                                View your personal details, saved addresses,
+                                and order history.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="profile-logout-button"
+                            onClick={handleLogout}
+                        >
+                            Log Out
+                        </button>
                     </div>
 
                     {/* Personal Information */}
@@ -357,88 +925,231 @@ function Profile() {
                         ) : error ? (
                             <p role="alert">{error}</p>
                         ) : isEditing ? (
-                            <form
-                                className="profile-edit-form"
-                                onSubmit={handleSaveProfile}
-                            >
-                                <div className="profile-edit-field">
-                                    <label htmlFor="edit-name">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        id="edit-name"
-                                        type="text"
-                                        value={editName}
-                                        onChange={(event) =>
-                                            setEditName(event.target.value)
-                                        }
-                                        maxLength={100}
-                                        required
-                                        disabled={savingProfile}
-                                    />
-                                </div>
+                            <>
+                                <form
+                                    className="profile-edit-form"
+                                    onSubmit={handleSaveProfile}
+                                >
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="edit-name">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            id="edit-name"
+                                            type="text"
+                                            value={editName}
+                                            onChange={(event) =>
+                                                setEditName(event.target.value)
+                                            }
+                                            maxLength={100}
+                                            required
+                                            disabled={savingProfile}
+                                        />
+                                    </div>
 
-                                <div className="profile-edit-field">
-                                    <label htmlFor="edit-email">
-                                        Email Address
-                                    </label>
-                                    <input
-                                        id="edit-email"
-                                        type="email"
-                                        value={user?.email || ""}
-                                        readOnly
-                                        disabled
-                                    />
-                                    <small>
-                                        Email cannot be changed here.
-                                    </small>
-                                </div>
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="edit-email">
+                                            Email Address
+                                        </label>
+                                        <input
+                                            id="edit-email"
+                                            type="email"
+                                            value={editEmail}
+                                            onChange={(event) =>
+                                                setEditEmail(event.target.value)
+                                            }
+                                            required
+                                            disabled={savingProfile}
+                                        />
 
-                                <div className="profile-edit-field">
-                                    <label htmlFor="edit-phone">
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        id="edit-phone"
-                                        type="tel"
-                                        value={editPhone}
-                                        onChange={(event) =>
-                                            setEditPhone(event.target.value)
-                                        }
-                                        maxLength={15}
-                                        required
-                                        disabled={savingProfile}
-                                    />
-                                </div>
+                                        {editEmail.trim().toLowerCase() !==
+                                            (user?.email || "").toLowerCase() && (
+                                                <>
+                                                    <small>
+                                                        Enter your current password
+                                                        to confirm this email change.
+                                                    </small>
+                                                    <input
+                                                        aria-label="Current password to confirm email change"
+                                                        type="password"
+                                                        autoComplete="current-password"
+                                                        placeholder="Current password"
+                                                        value={emailCurrentPassword}
+                                                        onChange={(event) =>
+                                                            setEmailCurrentPassword(
+                                                                event.target.value
+                                                            )
+                                                        }
+                                                        required
+                                                        disabled={savingProfile}
+                                                    />
+                                                </>
+                                            )}
+                                    </div>
 
-                                {profileMessageType === "error" &&
-                                    profileMessage && (
-                                        <p className="profile-message profile-message-error" role="alert">
-                                            {profileMessage}
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="edit-phone">
+                                            Phone Number
+                                        </label>
+                                        <input
+                                            id="edit-phone"
+                                            type="tel"
+                                            value={editPhone}
+                                            onChange={(event) =>
+                                                setEditPhone(event.target.value)
+                                            }
+                                            maxLength={15}
+                                            required
+                                            disabled={savingProfile}
+                                        />
+                                    </div>
+
+                                    <div className="profile-edit-actions">
+                                        <button
+                                            type="submit"
+                                            className="profile-save-button"
+                                            disabled={savingProfile}
+                                        >
+                                            {savingProfile
+                                                ? "Saving..."
+                                                : "Save Profile"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="profile-cancel-button"
+                                            onClick={handleCancelEdit}
+                                            disabled={savingProfile}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div className="profile-password-area">
+                                    <div className="profile-password-heading">
+                                        <div>
+                                            <h3>Change Password</h3>
+                                            <p>
+                                                Keep your account secure by
+                                                using a strong password.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="profile-secondary-button"
+                                            onClick={() => {
+                                                setShowPasswordForm(
+                                                    (previous) => !previous
+                                                );
+                                                setPasswordMessage("");
+                                                setPasswordMessageType("");
+                                            }}
+                                        >
+                                            {showPasswordForm
+                                                ? "Cancel"
+                                                : "Change Password"}
+                                        </button>
+                                    </div>
+
+                                    {passwordMessage && (
+                                        <p
+                                            className={`profile-message profile-message-${passwordMessageType}`}
+                                            role={
+                                                passwordMessageType === "error"
+                                                    ? "alert"
+                                                    : "status"
+                                            }
+                                        >
+                                            {passwordMessage}
                                         </p>
                                     )}
 
-                                <div className="profile-edit-actions">
-                                    <button
-                                        type="submit"
-                                        className="profile-save-button"
-                                        disabled={savingProfile}
-                                    >
-                                        {savingProfile
-                                            ? "Saving..."
-                                            : "Save Changes"}
-                                    </button>
+                                    {showPasswordForm && (
+                                        <form
+                                            className="profile-edit-form"
+                                            onSubmit={handleChangePassword}
+                                        >
+                                            <div className="profile-edit-field">
+                                                <label htmlFor="current-password">
+                                                    Current Password
+                                                </label>
+                                                <input
+                                                    id="current-password"
+                                                    type="password"
+                                                    autoComplete="current-password"
+                                                    value={currentPassword}
+                                                    onChange={(event) =>
+                                                        setCurrentPassword(
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                    disabled={savingPassword}
+                                                />
+                                            </div>
 
-                                    <button
-                                        type="button"
-                                        className="profile-cancel-button"
-                                        onClick={handleCancelEdit}
-                                        disabled={savingProfile}
-                                    >
-                                        Cancel
-                                    </button>
+                                            <div className="profile-edit-field">
+                                                <label htmlFor="new-password">
+                                                    New Password
+                                                </label>
+                                                <input
+                                                    id="new-password"
+                                                    type="password"
+                                                    autoComplete="new-password"
+                                                    value={newPassword}
+                                                    onChange={(event) =>
+                                                        setNewPassword(
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    minLength={8}
+                                                    required
+                                                    disabled={savingPassword}
+                                                />
+                                                <small>
+                                                    At least 8 characters,
+                                                    including uppercase and
+                                                    lowercase letters, a number,
+                                                    and a special character.
+                                                </small>
+                                            </div>
+
+                                            <div className="profile-edit-field">
+                                                <label htmlFor="confirm-password">
+                                                    Confirm New Password
+                                                </label>
+                                                <input
+                                                    id="confirm-password"
+                                                    type="password"
+                                                    autoComplete="new-password"
+                                                    value={confirmPassword}
+                                                    onChange={(event) =>
+                                                        setConfirmPassword(
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                    disabled={savingPassword}
+                                                />
+                                            </div>
+
+                                            <div className="profile-edit-actions">
+                                                <button
+                                                    type="submit"
+                                                    className="profile-save-button"
+                                                    disabled={savingPassword}
+                                                >
+                                                    {savingPassword
+                                                        ? "Updating..."
+                                                        : "Update Password"}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
                                 </div>
-                            </form>
+                            </>
                         ) : (
                             <div className="profile-information">
                                 <div>
@@ -489,46 +1200,235 @@ function Profile() {
                         ) : addresses.length === 0 ? (
                             <p>You haven't saved any addresses yet.</p>
                         ) : (
-                            <div className="profile-information">
+                            <div className="profile-address-list">
                                 {addresses.map((address, index) => (
-                                    <div
-                                        key={
-                                            address._id ||
-                                            address.id ||
-                                            index
-                                        }
+                                    <article
+                                        className="profile-address-card"
+                                        key={address._id || address.id || index}
                                     >
-                                        <span>
-                                            {address.fullName ||
-                                                "Saved Address"}
+                                        <div className="profile-address-heading">
+                                            <div>
+                                                <span className="profile-address-name">
+                                                    {address.fullName ||
+                                                        "Saved Address"}
+                                                </span>
 
-                                            {address.isDefault &&
-                                                " — DEFAULT"}
-                                        </span>
+                                                {address.isDefault && (
+                                                    <span className="profile-default-badge">
+                                                        Default
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                className="profile-secondary-button"
+                                                onClick={() =>
+                                                    handleEditAddress(address)
+                                                }
+                                            >
+                                                Edit Address
+                                            </button>
+                                        </div>
 
                                         <p>
                                             {formatAddress(address) ||
                                                 "Address details unavailable"}
                                         </p>
-
                                         <p>
                                             {address.phone ||
                                                 "No phone number provided"}
                                         </p>
-                                    </div>
+                                    </article>
                                 ))}
+                            </div>
+                        )}
+
+                        {editingAddress && (
+                            <div className="profile-address-edit">
+                                <h3>Edit Address</h3>
+
+                                {addressFormMessage && (
+                                    <p
+                                        className={`profile-message profile-message-${addressFormMessageType}`}
+                                        role={
+                                            addressFormMessageType === "error"
+                                                ? "alert"
+                                                : "status"
+                                        }
+                                    >
+                                        {addressFormMessage}
+                                    </p>
+                                )}
+
+                                <form
+                                    className="profile-edit-form"
+                                    onSubmit={handleSaveAddress}
+                                >
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="address-full-name">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            id="address-full-name"
+                                            name="fullName"
+                                            value={addressForm.fullName}
+                                            onChange={handleAddressFieldChange}
+                                            required
+                                            disabled={savingAddress}
+                                        />
+                                    </div>
+
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="address-phone">
+                                            Phone Number
+                                        </label>
+                                        <input
+                                            id="address-phone"
+                                            name="phone"
+                                            type="tel"
+                                            value={addressForm.phone}
+                                            onChange={handleAddressFieldChange}
+                                            required
+                                            disabled={savingAddress}
+                                        />
+                                    </div>
+
+                                    <div className="profile-edit-field">
+                                        <label htmlFor="address-line">
+                                            Address
+                                        </label>
+                                        <input
+                                            id="address-line"
+                                            name="addressLine"
+                                            value={addressForm.addressLine}
+                                            onChange={handleAddressFieldChange}
+                                            required
+                                            disabled={savingAddress}
+                                        />
+                                    </div>
+
+                                    <div className="profile-address-form-grid">
+                                        <div className="profile-edit-field">
+                                            <label htmlFor="address-city">
+                                                City
+                                            </label>
+                                            <input
+                                                id="address-city"
+                                                name="city"
+                                                value={addressForm.city}
+                                                onChange={handleAddressFieldChange}
+                                                required
+                                                disabled={savingAddress}
+                                            />
+                                        </div>
+
+                                        <div className="profile-edit-field">
+                                            <label htmlFor="address-state">
+                                                State
+                                            </label>
+                                            <input
+                                                id="address-state"
+                                                name="state"
+                                                value={addressForm.state}
+                                                onChange={handleAddressFieldChange}
+                                                required
+                                                disabled={savingAddress}
+                                            />
+                                        </div>
+
+                                        <div className="profile-edit-field">
+                                            <label htmlFor="address-pincode">
+                                                PIN Code
+                                            </label>
+                                            <input
+                                                id="address-pincode"
+                                                name="pincode"
+                                                value={addressForm.pincode}
+                                                onChange={handleAddressFieldChange}
+                                                required
+                                                disabled={savingAddress}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <label className="profile-default-checkbox">
+                                        <input
+                                            type="checkbox"
+                                            name="isDefault"
+                                            checked={addressForm.isDefault}
+                                            onChange={handleAddressFieldChange}
+                                            disabled={
+                                                savingAddress ||
+                                                Boolean(editingAddress.isDefault)
+                                            }
+                                        />
+                                        <span>
+                                            {editingAddress.isDefault
+                                                ? "This is your default address"
+                                                : "Make this my default address"}
+                                        </span>
+                                    </label>
+
+                                    <div className="profile-edit-actions">
+                                        <button
+                                            type="submit"
+                                            className="profile-save-button"
+                                            disabled={savingAddress}
+                                        >
+                                            {savingAddress
+                                                ? "Saving..."
+                                                : "Save Address"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="profile-cancel-button"
+                                            onClick={handleCancelAddressEdit}
+                                            disabled={savingAddress}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         )}
                     </section>
 
                     {/* Order History */}
                     <section className="profile-section">
-                        <h2>Order History</h2>
+                        <div className="profile-section-heading">
+                            <h2>Order History</h2>
 
-                        {orderLoading ? (
+                            <button
+                                type="button"
+                                className="profile-edit-button"
+                                onClick={handleToggleOrders}
+                            >
+                                {showOrders ? "Hide Orders" : "View Orders"}
+                            </button>
+                        </div>
+
+                        {!showOrders ? (
+                            <p>
+                                Click “View Orders” to see your previous
+                                purchases and order details.
+                            </p>
+                        ) : orderLoading ? (
                             <p>Loading your orders...</p>
                         ) : orderError ? (
-                            <p role="alert">{orderError}</p>
+                            <div>
+                                <p role="alert">{orderError}</p>
+
+                                <button
+                                    type="button"
+                                    className="profile-secondary-button"
+                                    onClick={() => loadOrders(true)}
+                                    disabled={orderLoading}
+                                >
+                                    {orderLoading ? "Loading..." : "Try Again"}
+                                </button>
+                            </div>
                         ) : orders.length === 0 ? (
                             <p>You haven't placed any orders yet.</p>
                         ) : (
@@ -547,9 +1447,7 @@ function Profile() {
                                             <div>
                                                 <span>ORDER DATE</span>
                                                 <p>
-                                                    {formatDate(
-                                                        order.createdAt
-                                                    )}
+                                                    {formatDate(order.createdAt)}
                                                 </p>
                                             </div>
                                         </div>
@@ -564,25 +1462,51 @@ function Profile() {
                                                             `${order._id}-${index}`
                                                         }
                                                     >
-                                                        <div>
-                                                            <p>
-                                                                {item.product
-                                                                    ?.name ||
-                                                                    "Product unavailable"}
-                                                            </p>
+                                                        <div className="profile-order-item-main">
+                                                            <div>
+                                                                <p>
+                                                                    {item.product
+                                                                        ?.name ||
+                                                                        "Product unavailable"}
+                                                                </p>
+                                                                <span>
+                                                                    Size:{" "}
+                                                                    {item.variant
+                                                                        ?.size || "N/A"}
+                                                                    {" · "}
+                                                                    Quantity:{" "}
+                                                                    {item.quantity}
+                                                                </span>
+                                                            </div>
 
-                                                            <span>
-                                                                Size:{" "}
-                                                                {item.variant
-                                                                    ?.size ||
-                                                                    "N/A"}
-                                                                {" · "}
-                                                                Quantity:{" "}
-                                                                {item.quantity}
-                                                            </span>
+                                                            {order.orderStatus === "delivered" && item.product?._id && (
+                                                                <div className="profile-order-review-area">
+                                                                    {!item.reviewSubmitted ? (
+                                                                        <Link
+                                                                            to={`/products/${item.product._id}`}
+                                                                            state={{ openReview: true }}
+                                                                            className="profile-write-review-button"
+                                                                        >
+                                                                            Write a Review
+                                                                        </Link>
+                                                                    ) : item.reviewStatus === "pending" ? (
+                                                                        <span className="profile-review-status profile-review-status-pending">
+                                                                            Review pending approval
+                                                                        </span>
+                                                                    ) : item.reviewStatus === "approved" ? (
+                                                                        <span className="profile-review-status profile-review-status-approved">
+                                                                            Review approved
+                                                                        </span>
+                                                                    ) : item.reviewStatus === "rejected" ? (
+                                                                        <span className="profile-review-status profile-review-status-rejected">
+                                                                            Review submitted · Rejected
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+                                                            )}
                                                         </div>
 
-                                                        <p>
+                                                        <p className="profile-order-item-price">
                                                             {formatCurrency(
                                                                 (item.price || 0) *
                                                                 (item.quantity || 0)
@@ -643,17 +1567,81 @@ function Profile() {
                                         {order.shippingAddress && (
                                             <div className="profile-order-shipping">
                                                 <span>DELIVERY ADDRESS</span>
-
                                                 <p>
                                                     {formatAddress(
                                                         order.shippingAddress
                                                     ) || "Address unavailable"}
                                                 </p>
-
                                                 <p>
-                                                    {order.shippingAddress
-                                                        .phone || ""}
+                                                    {order.shippingAddress.phone ||
+                                                        ""}
                                                 </p>
+                                            </div>
+                                        )}
+
+                                        {(order.refundStatus &&
+                                            order.refundStatus !== "not_applicable") && (
+                                            <div className={`profile-refund-notice ${
+                                                order.refundStatus === "failed"
+                                                    ? "profile-refund-notice-danger"
+                                                    : order.refundStatus === "completed"
+                                                        ? "profile-refund-notice-success"
+                                                        : "profile-refund-notice-pending"
+                                            }`}>
+                                                <strong>Refund Notice</strong>
+                                                <p>{getRefundNotice(order)}</p>
+                                            </div>
+                                        )}
+
+                                        {order.returnRequest?.status &&
+                                            order.returnRequest.status !== "not_requested" && (
+                                                <div className="profile-return-status">
+                                                    <div>
+                                                        <span>RETURN REQUEST</span>
+                                                        <p>
+                                                            {getReturnStatusLabel(
+                                                                order.returnRequest.status
+                                                            )}
+                                                        </p>
+                                                    </div>
+
+                                                    {order.returnRequest.adminNote && (
+                                                        <div>
+                                                            <span>ADMIN NOTE</span>
+                                                            <p>
+                                                                {order.returnRequest.adminNote}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                        {(canCancelOrder(order) ||
+                                            canRequestReturn(order)) && (
+                                            <div className="profile-order-actions">
+                                                {canCancelOrder(order) && (
+                                                    <button
+                                                        type="button"
+                                                        className="profile-order-cancel-button"
+                                                        onClick={() =>
+                                                            openCancelOrderModal(order)
+                                                        }
+                                                    >
+                                                        Cancel Order
+                                                    </button>
+                                                )}
+
+                                                {canRequestReturn(order) && (
+                                                    <button
+                                                        type="button"
+                                                        className="profile-order-return-button"
+                                                        onClick={() =>
+                                                            openReturnOrderModal(order)
+                                                        }
+                                                    >
+                                                        Request Return
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </article>
@@ -663,6 +1651,195 @@ function Profile() {
                     </section>
                 </div>
             </main>
+
+            {selectedOrderAction && (
+                <div
+                    className="profile-modal-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeOrderActionModal();
+                        }
+                    }}
+                >
+                    <div
+                        className="profile-action-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="profile-order-action-title"
+                    >
+                        <div className="profile-action-modal-header">
+                            <div>
+                                <h2 id="profile-order-action-title">
+                                    {orderActionType === "cancel"
+                                        ? "Cancel Order"
+                                        : "Request a Return"}
+                                </h2>
+                                <p>
+                                    Order #{selectedOrderAction._id?.slice(0, 8)}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="profile-modal-close-button"
+                                onClick={closeOrderActionModal}
+                                disabled={orderActionLoading}
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="profile-action-modal-body">
+                            {orderActionType === "cancel" ? (
+                                <>
+                                    <div className="profile-confirmation-box profile-confirmation-danger">
+                                        <strong>Are you sure you want to cancel this order?</strong>
+                                        <p>
+                                            This action cannot be undone. Your order will be marked as cancelled and stock will be restored where applicable.
+                                        </p>
+                                    </div>
+
+                                    {selectedOrderAction.paymentMethod === "razorpay" &&
+                                        selectedOrderAction.paymentStatus === "paid" && (
+                                            <div className="profile-refund-info-box">
+                                                <strong>Refund notice</strong>
+                                                <p>
+                                                    Because this order has already been paid through Razorpay, a refund of {formatCurrency(selectedOrderAction.totalAmount)} will be recorded as pending after cancellation. The refund is handled separately from the cancellation.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                    {selectedOrderAction.paymentMethod === "cod" && (
+                                        <div className="profile-refund-info-box profile-refund-info-neutral">
+                                            <strong>No payment refund is due</strong>
+                                            <p>
+                                                This order uses Cash on Delivery, so no online payment has been collected.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="profile-modal-field">
+                                        <label htmlFor="cancel-reason">
+                                            Cancellation reason <span>(optional)</span>
+                                        </label>
+                                        <textarea
+                                            id="cancel-reason"
+                                            value={orderActionReason}
+                                            onChange={(event) =>
+                                                setOrderActionReason(event.target.value)
+                                            }
+                                            maxLength={500}
+                                            rows={4}
+                                            placeholder="Tell us why you want to cancel this order..."
+                                            disabled={orderActionLoading}
+                                        />
+                                        <small>{orderActionReason.length}/500</small>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="profile-confirmation-box profile-confirmation-info">
+                                        <strong>Submit a return request for this delivered order.</strong>
+                                        <p>
+                                            Your request will be reviewed by the AquaCart team. A return request does not immediately mark the order as returned.
+                                        </p>
+                                    </div>
+
+                                    {selectedOrderAction.paymentMethod === "razorpay" && (
+                                        <div className="profile-refund-info-box">
+                                            <strong>Refund notice</strong>
+                                            <p>
+                                                If your return is approved, any eligible refund will be handled separately after review. This request does not mean the refund has already been issued.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="profile-modal-field">
+                                        <label htmlFor="return-reason">
+                                            Return reason
+                                        </label>
+                                        <select
+                                            id="return-reason"
+                                            value={orderActionReason}
+                                            onChange={(event) =>
+                                                setOrderActionReason(event.target.value)
+                                            }
+                                            disabled={orderActionLoading}
+                                        >
+                                            <option value="">Select a reason</option>
+                                            <option value="Damaged product">Damaged product</option>
+                                            <option value="Wrong product received">Wrong product received</option>
+                                            <option value="Product not as described">Product not as described</option>
+                                            <option value="Quality issue">Quality issue</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="profile-modal-field">
+                                        <label htmlFor="return-details">
+                                            Additional details <span>(optional)</span>
+                                        </label>
+                                        <textarea
+                                            id="return-details"
+                                            value={orderActionDetails}
+                                            onChange={(event) =>
+                                                setOrderActionDetails(event.target.value)
+                                            }
+                                            maxLength={1000}
+                                            rows={5}
+                                            placeholder="Describe the issue with the product..."
+                                            disabled={orderActionLoading}
+                                        />
+                                        <small>{orderActionDetails.length}/1000</small>
+                                    </div>
+                                </>
+                            )}
+
+                            {orderActionError && (
+                                <p className="profile-modal-error" role="alert">
+                                    {orderActionError}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="profile-action-modal-footer">
+                            <button
+                                type="button"
+                                className="profile-cancel-button"
+                                onClick={closeOrderActionModal}
+                                disabled={orderActionLoading}
+                            >
+                                Go Back
+                            </button>
+
+                            <button
+                                type="button"
+                                className={
+                                    orderActionType === "cancel"
+                                        ? "profile-modal-danger-button"
+                                        : "profile-modal-primary-button"
+                                }
+                                onClick={
+                                    orderActionType === "cancel"
+                                        ? handleCancelOrder
+                                        : handleReturnRequest
+                                }
+                                disabled={orderActionLoading}
+                            >
+                                {orderActionLoading
+                                    ? orderActionType === "cancel"
+                                        ? "Cancelling..."
+                                        : "Submitting..."
+                                    : orderActionType === "cancel"
+                                        ? "Confirm Cancellation"
+                                        : "Submit Return Request"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </>

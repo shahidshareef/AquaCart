@@ -8,9 +8,12 @@ const {
     getProductReviewsController
 } = require("../controllers/customerProductController");
 
+const { getCategories } = require("../controllers/categoryController");
+
 const router = express.Router();
 
 router.get("/featured", getFeaturedProductsController);
+router.get("/categories", getCategories);
 router.get("/", getCustomerProductsController);
 router.get("/:id/related", getRelatedProductsController);
 router.get("/:id/reviews", getProductReviewsController);

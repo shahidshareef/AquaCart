@@ -21,8 +21,16 @@ async function getCustomerOrders(userId) {
         .sort({ createdAt: -1 });
 }
 
-async function getOrderById(orderId) {
-    return Order.findById(orderId)
+async function getOrderById(orderId, userId = null) {
+    const query = { _id: orderId };
+
+    // Customer order lookup must be restricted to that customer's own order.
+    // Admin callers pass no userId and can look up any order.
+    if (userId) {
+        query.user = userId;
+    }
+
+    return Order.findOne(query)
         .populate("user", "name email phone")
         .populate("orderItems.product", "name")
         .populate("orderItems.variant", "size sku price");

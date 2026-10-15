@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import AdminLayout from "../../components/admin/AdminLayout";
 import SalesChart from "../../components/admin/SalesChart";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ function AdminDashboard() {
     const [recentOrders, setRecentOrders] = useState([]);
     const [dashboardLoading, setDashboardLoading] = useState(true);
     const [dashboardMessage, setDashboardMessage] = useState("");
+        const [dashboardStats, setDashboardStats] = useState(null);
 
 
     useEffect(() => {
@@ -27,8 +29,9 @@ function AdminDashboard() {
                 setDashboardLoading(true);
                 setDashboardMessage("");
 
-                const response = await fetch(
-                    "http://localhost:5000/api/admin/dashboard"
+                const timezoneOffset = new Date().getTimezoneOffset();
+                const response = await adminFetch(
+                    `/api/admin/dashboard?timezoneOffset=${timezoneOffset}`
                 );
 
                 const result = await response.json();
@@ -40,6 +43,7 @@ function AdminDashboard() {
                 }
 
                 const orders = result.data.recentOrders || [];
+                                setDashboardStats(result.data);
 
                 const formattedOrders = orders.map((order) => {
 
@@ -105,10 +109,10 @@ function AdminDashboard() {
 
             } catch (error) {
 
-                console.log(error);
+                console.error("Failed to fetch dashboard data:", error);
 
                 setDashboardMessage(
-                    "Something went wrong while fetching dashboard data."
+                    error.message || "Something went wrong while fetching dashboard data."
                 );
 
             } finally {
@@ -141,151 +145,17 @@ function AdminDashboard() {
     }
 
 
-    const periodData = {
-
-        today: {
-            label: "Today",
-            subtotal: "₹3,594",
-
-            salesData: [
-                {
-                    day: "9 AM",
-                    revenue: 450,
-                    previous: 380,
-                    orders: 1,
-                    previousOrders: 1
-                },
-                {
-                    day: "11 AM",
-                    revenue: 720,
-                    previous: 600,
-                    orders: 2,
-                    previousOrders: 2
-                },
-                {
-                    day: "1 PM",
-                    revenue: 980,
-                    previous: 850,
-                    orders: 3,
-                    previousOrders: 2
-                },
-                {
-                    day: "3 PM",
-                    revenue: 540,
-                    previous: 480,
-                    orders: 2,
-                    previousOrders: 2
-                },
-                {
-                    day: "5 PM",
-                    revenue: 904,
-                    previous: 780,
-                    orders: 3,
-                    previousOrders: 2
-                }
-            ]
-        },
-
-
-        week: {
-            label: "This Week",
-            subtotal: "₹1,93,200",
-
-            salesData: [
-                {
-                    day: "Mon",
-                    revenue: 18000,
-                    previous: 15000,
-                    orders: 8,
-                    previousOrders: 7
-                },
-                {
-                    day: "Tue",
-                    revenue: 22000,
-                    previous: 19000,
-                    orders: 10,
-                    previousOrders: 9
-                },
-                {
-                    day: "Wed",
-                    revenue: 26000,
-                    previous: 23000,
-                    orders: 12,
-                    previousOrders: 10
-                },
-                {
-                    day: "Thu",
-                    revenue: 24000,
-                    previous: 21000,
-                    orders: 11,
-                    previousOrders: 10
-                },
-                {
-                    day: "Fri",
-                    revenue: 31200,
-                    previous: 27000,
-                    orders: 12,
-                    previousOrders: 11
-                },
-                {
-                    day: "Sat",
-                    revenue: 38000,
-                    previous: 32000,
-                    orders: 15,
-                    previousOrders: 13
-                },
-                {
-                    day: "Sun",
-                    revenue: 34000,
-                    previous: 29000,
-                    orders: 13,
-                    previousOrders: 12
-                }
-            ]
-        },
-
-
-        month: {
-            label: "This Month",
-            subtotal: "₹8,42,650",
-
-            salesData: [
-                {
-                    day: "Week 1",
-                    revenue: 182500,
-                    previous: 160000,
-                    orders: 42,
-                    previousOrders: 37
-                },
-                {
-                    day: "Week 2",
-                    revenue: 205000,
-                    previous: 178000,
-                    orders: 48,
-                    previousOrders: 41
-                },
-                {
-                    day: "Week 3",
-                    revenue: 214350,
-                    previous: 190000,
-                    orders: 51,
-                    previousOrders: 45
-                },
-                {
-                    day: "Week 4",
-                    revenue: 240800,
-                    previous: 211000,
-                    orders: 57,
-                    previousOrders: 49
-                }
-            ]
-        }
-
+    const selectedPeriodData = dashboardStats?.sales?.[selectedPeriod] || {
+        label: selectedPeriod === "today" ? "Today" : selectedPeriod === "month" ? "This Month" : "This Week",
+        subtotal: 0,
+        salesData: []
     };
 
-
-    const selectedPeriodData = periodData[selectedPeriod];
-
+    function formatCurrency(value) {
+        return `₹${Number(value || 0).toLocaleString("en-IN", {
+            maximumFractionDigits: 2
+        })}`;
+    }
 
     function openOrderModal(order) {
         setSelectedOrder(order);
@@ -305,27 +175,64 @@ function AdminDashboard() {
     }
 
 
-    function handleUpdateOrder() {
+       async function handleUpdateOrder() {
 
-        setRecentOrders((currentOrders) =>
-            currentOrders.map((order) =>
-                order.id === selectedOrder.id
-                    ? {
-                        ...order,
-                        status: orderStatus
-                    }
-                    : order
-            )
-        );
+        if (!selectedOrder) {
+            return;
+        }
 
-        setSelectedOrder({
-            ...selectedOrder,
-            status: orderStatus
-        });
+        try {
 
-        setUpdateMessage(
-            `Order ${selectedOrder.id} updated to ${orderStatus}.`
-        );
+            const response = await adminFetch(
+                `/api/admin/orders/${selectedOrder.mongoId}/status`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderStatus: orderStatus.toLowerCase()
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                setUpdateMessage(
+                    result.message || "Failed to update order status."
+                );
+                return;
+            }
+
+            setRecentOrders((currentOrders) =>
+                currentOrders.map((order) =>
+                    order.id === selectedOrder.id
+                        ? {
+                            ...order,
+                            status: orderStatus
+                        }
+                        : order
+                )
+            );
+
+            setSelectedOrder({
+                ...selectedOrder,
+                status: orderStatus
+            });
+
+            setUpdateMessage(
+                `Order ${selectedOrder.id} updated to ${orderStatus}.`
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+            setUpdateMessage(
+                "Something went wrong while updating the order status."
+            );
+        }
     }
 
 
@@ -430,7 +337,7 @@ function AdminDashboard() {
                         </span>
 
                         <strong>
-                            {selectedPeriodData.subtotal}
+                            {formatCurrency(selectedPeriodData.subtotal)}
                         </strong>
 
                     </div>
@@ -440,9 +347,7 @@ function AdminDashboard() {
             </div>
 
 
-            {/* Statistics Cards */}
-
-            <div className="dashboard-stats">
+                        <div className="dashboard-stats">
 
                 <div className="dashboard-stat-card">
 
@@ -459,11 +364,13 @@ function AdminDashboard() {
                     </div>
 
                     <h3>
-                        ₹1,24,850
+                        ₹{Number(dashboardStats?.totalRevenue || 0).toLocaleString("en-IN")}
                     </h3>
 
                     <p className="stat-success">
-                        ↑ +14.2% vs last month
+                        {typeof dashboardStats?.revenueGrowth === "number"
+                            ? `${dashboardStats.revenueGrowth >= 0 ? "↑ +" : "↓ "}${dashboardStats.revenueGrowth}% vs last month`
+                            : "Lifetime revenue"}
                     </p>
 
                 </div>
@@ -484,12 +391,12 @@ function AdminDashboard() {
                     </div>
 
                     <h3>
-                        48 Orders
+                        {dashboardStats?.totalOrders || 0} Orders
                     </h3>
 
                     <p className="stat-orders">
 
-                        • +8 new today
+                        • +{dashboardStats?.newOrdersToday || 0} new today
 
                         <span>
                             lifetime placed
@@ -515,11 +422,11 @@ function AdminDashboard() {
                     </div>
 
                     <h3>
-                        10 Active
+                        {dashboardStats?.totalProducts || 0} Active
                     </h3>
 
                     <p className="stat-success">
-                        ✓ In 4 active categories
+                        ✓ In {dashboardStats?.activeCategories || 0} active categories
                     </p>
 
                 </div>
@@ -755,7 +662,7 @@ function AdminDashboard() {
 
                     <strong>
                         Subtotal {selectedPeriodData.label}:{" "}
-                        {selectedPeriodData.subtotal}
+                        {formatCurrency(selectedPeriodData.subtotal)}
                     </strong>
 
                 </div>

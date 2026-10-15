@@ -2,7 +2,7 @@ import "../../styles/AdminLogin.css";
 import { useState } from "react";
 import { adminLogin } from "../../services/authApi";
 import { useNavigate } from "react-router-dom";
-import Header from "../../components/common/Header";
+import AdminHeader from "./AdminHeader";
 import Footer from "../../components/common/Footer";
 
 function AdminLogin() {
@@ -68,7 +68,7 @@ function AdminLogin() {
 
     return (
         <>
-            <Header />
+            <AdminHeader />
 
             <div className="admin-login-page">
 

@@ -1,3 +1,4 @@
+import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 
@@ -37,7 +38,7 @@ function Categories() {
             setLoading(true);
             setError("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/categories"
             );
 
@@ -49,7 +50,38 @@ function Categories() {
                 );
             }
 
-            setCategories(result.data);
+            const productCounts = {};
+
+            try {
+                const productResponse = await adminFetch(
+                    "http://localhost:5000/api/admin/products"
+                );
+
+                const productResult = await productResponse.json();
+
+                if (productResponse.ok) {
+                    productResult.data.forEach(function (product) {
+                        const categoryId =
+                            product.category?._id || product.category;
+
+                        if (categoryId) {
+                            productCounts[categoryId] =
+                                (productCounts[categoryId] || 0) + 1;
+                        }
+                    });
+                }
+            } catch (productError) {
+                console.error(productError);
+            }
+
+            setCategories(
+                result.data.map(function (category) {
+                    return {
+                        ...category,
+                        productCount: productCounts[category._id] || 0
+                    };
+                })
+            );
         } catch (error) {
             console.error(error);
             setError("Failed to load categories");
@@ -90,18 +122,33 @@ function Categories() {
             setSaving(true);
             setSaveError("");
 
-            if (!categoryName.trim()) {
+            const trimmedName = categoryName.trim();
+
+            if (!trimmedName) {
                 setSaveError("Category name is required");
                 return;
             }
 
+            const duplicateCategory = categories.find(
+                (category) =>
+                    category.name?.trim().toLowerCase() ===
+                    trimmedName.toLowerCase()
+            );
+
+            if (duplicateCategory) {
+                setSaveError(
+                    "A category with this name already exists. Please choose a different name."
+                );
+                return;
+            }
+
             console.log("CATEGORY DATA BEING SENT:", {
-                name: categoryName,
-                description: description,
+                name: trimmedName,
+                description: description.trim(),
                 status: status
             });
 
-            const response = await fetch(
+            const response = await adminFetch(
                 "http://localhost:5000/api/admin/categories",
                 {
                     method: "POST",
@@ -109,9 +156,10 @@ function Categories() {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        name: categoryName.trim(),
+                        name: trimmedName,
                         description: description.trim(),
-                        status: status
+                        status: status,
+                        icon: selectedIcon
                     })
                 }
             );
@@ -127,10 +175,16 @@ function Categories() {
             await fetchCategories();
 
             handleCloseModal();
-
         } catch (error) {
             console.error(error);
-            setSaveError(error.message);
+
+            if (error.message?.includes("duplicate")) {
+                setSaveError(
+                    "A category with this name already exists. Please choose a different name."
+                );
+            } else {
+                setSaveError(error.message);
+            }
         } finally {
             setSaving(false);
         }
@@ -157,7 +211,28 @@ function Categories() {
             setEditing(true);
             setEditError("");
 
-            const response = await fetch(
+            const trimmedName = editCategoryName.trim();
+
+            if (!trimmedName) {
+                setEditError("Category name is required");
+                return;
+            }
+
+            const duplicateCategory = categories.find(
+                (category) =>
+                    category._id !== categoryToEdit._id &&
+                    category.name?.trim().toLowerCase() ===
+                    trimmedName.toLowerCase()
+            );
+
+            if (duplicateCategory) {
+                setEditError(
+                    "A category with this name already exists. Please choose a different name."
+                );
+                return;
+            }
+
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/categories/${categoryToEdit._id}`,
                 {
                     method: "PUT",
@@ -165,8 +240,8 @@ function Categories() {
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        name: editCategoryName,
-                        description: editDescription,
+                        name: trimmedName,
+                        description: editDescription.trim(),
                         status: editStatus
                     })
                 }
@@ -184,10 +259,16 @@ function Categories() {
 
             setShowEditModal(false);
             setCategoryToEdit(null);
-
         } catch (error) {
             console.error(error);
-            setEditError(error.message);
+
+            if (error.message?.includes("duplicate")) {
+                setEditError(
+                    "A category with this name already exists. Please choose a different name."
+                );
+            } else {
+                setEditError(error.message);
+            }
         } finally {
             setEditing(false);
         }
@@ -217,7 +298,7 @@ function Categories() {
             setDeleting(true);
             setDeleteError("");
 
-            const response = await fetch(
+            const response = await adminFetch(
                 `http://localhost:5000/api/admin/categories/${categoryToDelete._id}`,
                 {
                     method: "DELETE"
@@ -236,7 +317,6 @@ function Categories() {
 
             setShowDeleteModal(false);
             setCategoryToDelete(null);
-
         } catch (error) {
             console.error(error);
             setDeleteError(error.message);
@@ -376,7 +456,7 @@ function Categories() {
                                                     <div className="flex items-center gap-4">
 
                                                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-xl">
-                                                            💧
+                                                            {category.icon || "💧"}
                                                         </div>
 
                                                         <div>
@@ -398,7 +478,10 @@ function Categories() {
                                                 <td className="px-6 py-5">
 
                                                     <span className="text-sm font-semibold text-slate-800">
-                                                        0 Products
+                                                        {category.productCount || 0}{" "}
+                                                        {category.productCount === 1
+                                                            ? "Product"
+                                                            : "Products"}
                                                     </span>
 
                                                 </td>
@@ -408,15 +491,15 @@ function Categories() {
 
                                                     <span
                                                         className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${category.status === "active"
-                                                            ? "bg-green-50 text-green-700"
-                                                            : "bg-slate-100 text-slate-600"
+                                                                ? "bg-green-50 text-green-700"
+                                                                : "bg-slate-100 text-slate-600"
                                                             }`}
                                                     >
 
                                                         <span
                                                             className={`h-1.5 w-1.5 rounded-full ${category.status === "active"
-                                                                ? "bg-green-500"
-                                                                : "bg-slate-400"
+                                                                    ? "bg-green-500"
+                                                                    : "bg-slate-400"
                                                                 }`}
                                                         ></span>
 
@@ -530,9 +613,13 @@ function Categories() {
                                 <input
                                     type="text"
                                     value={categoryName}
-                                    onChange={(event) =>
-                                        setCategoryName(event.target.value)
-                                    }
+                                    onChange={(event) => {
+                                        setCategoryName(event.target.value);
+
+                                        if (saveError) {
+                                            setSaveError("");
+                                        }
+                                    }}
                                     placeholder="e.g., Insulated Bottles"
                                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                                 />
@@ -574,29 +661,27 @@ function Categories() {
 
                                 <div className="grid grid-cols-2 gap-3">
 
-                                    {/* Active */}
                                     <button
                                         type="button"
                                         onClick={() =>
                                             handleAddStatusChange("active")
                                         }
                                         className={`w-full rounded-lg border px-4 py-3 text-sm font-semibold transition ${status === "active"
-                                            ? "border-sky-500 bg-sky-500 text-white"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                                ? "border-sky-500 bg-sky-500 text-white"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                             }`}
                                     >
                                         Active
                                     </button>
 
-                                    {/* Draft */}
                                     <button
                                         type="button"
                                         onClick={() =>
                                             handleAddStatusChange("inactive")
                                         }
                                         className={`w-full rounded-lg border px-4 py-3 text-sm font-semibold transition ${status === "inactive"
-                                            ? "border-sky-500 bg-sky-500 text-white"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                                ? "border-sky-500 bg-sky-500 text-white"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                             }`}
                                     >
                                         Draft
@@ -628,8 +713,8 @@ function Categories() {
                                                     setSelectedIcon(icon)
                                                 }
                                                 className={`flex h-14 items-center justify-center rounded-lg border text-2xl transition ${selectedIcon === icon
-                                                    ? "border-sky-500 bg-sky-50 ring-2 ring-sky-100"
-                                                    : "border-slate-200 bg-white hover:border-slate-300"
+                                                        ? "border-sky-500 bg-sky-50 ring-2 ring-sky-100"
+                                                        : "border-slate-200 bg-white hover:border-slate-300"
                                                     }`}
                                             >
                                                 {icon}
@@ -713,9 +798,13 @@ function Categories() {
                                 <input
                                     type="text"
                                     value={editCategoryName}
-                                    onChange={(event) =>
-                                        setEditCategoryName(event.target.value)
-                                    }
+                                    onChange={(event) => {
+                                        setEditCategoryName(event.target.value);
+
+                                        if (editError) {
+                                            setEditError("");
+                                        }
+                                    }}
                                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                                 />
 
@@ -755,29 +844,27 @@ function Categories() {
 
                                 <div className="grid grid-cols-2 gap-3">
 
-                                    {/* Active */}
                                     <button
                                         type="button"
                                         onClick={() =>
                                             handleEditStatusChange("active")
                                         }
                                         className={`w-full rounded-lg border px-4 py-3 text-sm font-semibold transition ${editStatus === "active"
-                                            ? "border-sky-500 bg-sky-500 text-white"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                                ? "border-sky-500 bg-sky-500 text-white"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                             }`}
                                     >
                                         Active
                                     </button>
 
-                                    {/* Draft */}
                                     <button
                                         type="button"
                                         onClick={() =>
                                             handleEditStatusChange("inactive")
                                         }
                                         className={`w-full rounded-lg border px-4 py-3 text-sm font-semibold transition ${editStatus === "inactive"
-                                            ? "border-sky-500 bg-sky-500 text-white"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                                ? "border-sky-500 bg-sky-500 text-white"
+                                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                             }`}
                                     >
                                         Draft
@@ -827,12 +914,10 @@ function Categories() {
 
                     <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
 
-                        {/* Modal Content */}
                         <div className="px-6 py-6">
 
                             <div className="flex items-start gap-4">
 
-                                {/* Warning Icon */}
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-xl">
                                     ⚠️
                                 </div>
@@ -853,7 +938,6 @@ function Categories() {
 
                             </div>
 
-                            {/* Delete Error */}
                             {deleteError && (
                                 <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
                                     {deleteError}
@@ -862,7 +946,6 @@ function Categories() {
 
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
 
                             <button

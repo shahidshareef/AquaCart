@@ -1,4 +1,3 @@
-
 const express = require("express");
 
 const {
@@ -11,7 +10,8 @@ const {
     verifyAdminOtpUser,
     customerLoginUser,
     getCustomerProfile,
-    updateCustomerProfile
+    updateCustomerProfile,
+    changeCustomerPasswordUser,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -23,16 +23,19 @@ router.post("/verify-email", verifyEmail);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/resend-otp", resendOtp);
+
 router.post("/admin-login", adminLoginUser);
 router.post("/admin/verify-otp", verifyAdminOtpUser);
+
 router.post("/login", customerLoginUser);
 
-// Protected customer profile endpoint
+// Protected customer profile endpoints
 router.get("/profile", authMiddleware, getCustomerProfile);
+router.put("/profile", authMiddleware, updateCustomerProfile);
 router.put(
-    "/profile",
+    "/change-password",
     authMiddleware,
-    updateCustomerProfile
+    changeCustomerPasswordUser
 );
 
 module.exports = router;

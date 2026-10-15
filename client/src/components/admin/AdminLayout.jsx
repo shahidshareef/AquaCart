@@ -97,6 +97,17 @@ function AdminLayout({ children, pageTitle = "Dashboard" }) {
                     </NavLink>
 
                     <NavLink
+                        to="/admin/reviews"
+                        className={({ isActive }) =>
+                            isActive
+                                ? "admin-nav-link active"
+                                : "admin-nav-link"
+                        }
+                    >
+                        Reviews
+                    </NavLink>
+
+                    <NavLink
                         to="/admin/profile"
                         className={({ isActive }) =>
                             isActive

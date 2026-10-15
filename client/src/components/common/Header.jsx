@@ -63,10 +63,6 @@ function Header() {
                         Products
                     </NavLink>
 
-                    <NavLink to="/about" className="header-nav-link">
-                        About
-                    </NavLink>
-
                     <NavLink to="/reviews" className="header-nav-link">
                         Reviews
                     </NavLink>

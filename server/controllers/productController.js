@@ -1,3 +1,4 @@
+
 const {
     getAllProducts,
     getProductById,
@@ -15,7 +16,7 @@ async function getProducts(req, res) {
             data: products
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
         res.status(500).json({
             message: "Failed to fetch products"
@@ -33,17 +34,13 @@ async function createProductController(req, res) {
             status
         } = req.body;
 
-        const image = req.file
-            ? `/uploads/${req.file.filename}`
-            : null;
-
-        if (!name) {
+        if (!name || !name.trim()) {
             return res.status(400).json({
                 message: "Product name is required"
             });
         }
 
-        if (!description) {
+        if (!description || !description.trim()) {
             return res.status(400).json({
                 message: "Product description is required"
             });
@@ -55,12 +52,17 @@ async function createProductController(req, res) {
             });
         }
 
+        // req.files contains every image uploaded through upload.array().
+        const images = (req.files || []).map(function (file) {
+            return `/uploads/${file.filename}`;
+        });
+
         const product = await createProduct({
             name,
             description,
             category,
             brand,
-            images: image ? [image] : [],
+            images,
             status
         });
 
@@ -69,7 +71,7 @@ async function createProductController(req, res) {
             data: product
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
         res.status(500).json({
             message: "Failed to create product"
@@ -78,15 +80,14 @@ async function createProductController(req, res) {
 }
 
 async function updateProductController(req, res) {
-
     try {
-
         const productData = {
             name: req.body.name,
             description: req.body.description,
             category: req.body.category
         };
 
+        // The existing edit form still uploads one "image" file.
         if (req.file) {
             productData.images = [
                 `/uploads/${req.file.filename}`
@@ -108,16 +109,13 @@ async function updateProductController(req, res) {
             message: "Product updated successfully",
             data: product
         });
-
     } catch (error) {
-
         console.error(error);
 
         res.status(500).json({
             message: "Failed to update product",
             error: error.message
         });
-
     }
 }
 
@@ -138,7 +136,7 @@ async function deleteProductController(req, res) {
             data: product
         });
     } catch (error) {
-        console.log(error);
+        console.error(error);
 
         res.status(500).json({
             message: "Failed to delete product"
@@ -147,9 +145,7 @@ async function deleteProductController(req, res) {
 }
 
 async function getProductByIdController(req, res) {
-
     try {
-
         const { id } = req.params;
 
         const product = await getProductById(id);
@@ -164,15 +160,12 @@ async function getProductByIdController(req, res) {
             message: "Product fetched successfully",
             data: product
         });
-
     } catch (error) {
-
-        console.log(error);
+        console.error(error);
 
         res.status(500).json({
             message: "Failed to fetch product"
         });
-
     }
 }
 
