@@ -652,20 +652,83 @@
     margin-top: 16px;
 }
 
-.product-review-photos a {
+.product-review-photo-button {
     display: block;
     width: 100px;
     height: 100px;
+    padding: 0;
     overflow: hidden;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     background: #f8fafc;
+    cursor: pointer;
+}
+
+.product-review-photo-button:focus-visible {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
 }
 
 .product-review-photos img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.review-image-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.78);
+}
+
+.review-image-modal {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(92vw, 1100px);
+    height: min(88vh, 850px);
+    padding: 18px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.review-image-modal img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.review-image-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.review-image-modal-close:hover {
+    background: #000c11;
 }
 
 /* Write-review modal */

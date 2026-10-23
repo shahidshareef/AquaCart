@@ -66,6 +66,12 @@ function Header() {
                     <NavLink to="/reviews" className="header-nav-link">
                         Reviews
                     </NavLink>
+
+                    <NavLink to="/about" className="header-nav-link">
+                        About
+                    </NavLink>
+
+                    
                 </nav>
 
                 <div className="header-actions">

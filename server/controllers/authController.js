@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 const {
     registerUser: registerUserService,
     generateEmailOtp,
@@ -14,6 +16,9 @@ const {
 const User = require("../models/User");
 const PasswordResetToken = require("../models/PasswordResetToken");
 const createToken = require("../utils/jwt");
+const {
+    sendPasswordResetEmail,
+} = require("../utils/emailService");
 
 const verifyEmail = async (req, res) => {
     try {
@@ -90,6 +95,8 @@ const resendOtp = async (req, res) => {
             message: "OTP resent successfully",
         });
     } catch (error) {
+        console.error("Resend OTP error:", error);
+
         return res.status(400).json({
             message: error.message,
         });
@@ -150,6 +157,8 @@ const registerUser = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error("Register user error:", error);
+
         return res.status(400).json({
             message: error.message,
         });
@@ -176,24 +185,40 @@ const forgotPassword = async (req, res) => {
             });
         }
 
-        const resetToken = Math.random()
-            .toString(36)
-            .substring(2, 15);
+        const resetToken = crypto.randomBytes(32).toString("hex");
 
         await PasswordResetToken.deleteMany({
             user: user._id,
         });
 
-        await PasswordResetToken.create({
+        const passwordResetToken = await PasswordResetToken.create({
             user: user._id,
             token: resetToken,
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
         });
 
+        try {
+            await sendPasswordResetEmail(
+                user,
+                resetToken
+            );
+        } catch (error) {
+            await PasswordResetToken.deleteOne({
+                _id: passwordResetToken._id,
+            });
+
+            throw new Error(
+                `Password reset email could not be sent. ${error.message}`
+            );
+        }
+
         return res.json({
-            message: "Password reset link sent successfully",
+            message:
+                "Password reset link sent successfully. Please check your email.",
         });
     } catch (error) {
+        console.error("Forgot password error:", error);
+
         return res.status(400).json({
             message: error.message,
         });
@@ -222,7 +247,10 @@ const resetPassword = async (req, res) => {
 
         const resetToken = await findResetToken(token);
 
-        await resetUserPassword(resetToken.user, newPassword);
+        await resetUserPassword(
+            resetToken.user,
+            newPassword
+        );
 
         await PasswordResetToken.deleteOne({
             _id: resetToken._id,
@@ -232,6 +260,8 @@ const resetPassword = async (req, res) => {
             message: "Password reset successfully",
         });
     } catch (error) {
+        console.error("Reset password error:", error);
+
         return res.status(400).json({
             message: error.message,
         });
@@ -251,16 +281,18 @@ const adminLoginUser = async (req, res) => {
         const user = await adminLogin(email, password);
 
         return res.json({
-            message: "Admin login successful",
+            message:
+                "Admin login successful. Please check your email for the OTP.",
             admin: {
                 id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
             },
-            otp: user.adminOtp,
         });
     } catch (error) {
+        console.error("Admin login error:", error);
+
         return res.status(401).json({
             message: error.message,
         });
@@ -373,7 +405,9 @@ const updateCustomerProfile = async (req, res) => {
         }
 
         return res.status(400).json({
-            message: error.message || "Failed to update profile.",
+            message:
+                error.message ||
+                "Failed to update profile.",
         });
     }
 };
@@ -386,7 +420,10 @@ const changeCustomerPasswordUser = async (req, res) => {
             });
         }
 
-        const { currentPassword, newPassword } = req.body;
+        const {
+            currentPassword,
+            newPassword,
+        } = req.body;
 
         await changeCustomerPassword(
             req.user.userId,
@@ -398,10 +435,15 @@ const changeCustomerPasswordUser = async (req, res) => {
             message: "Password changed successfully.",
         });
     } catch (error) {
-        console.error("Change customer password error:", error);
+        console.error(
+            "Change customer password error:",
+            error
+        );
 
         return res.status(400).json({
-            message: error.message || "Failed to change password.",
+            message:
+                error.message ||
+                "Failed to change password.",
         });
     }
 };
@@ -416,11 +458,16 @@ const verifyAdminOtpUser = async (req, res) => {
             });
         }
 
-        const user = await verifyAdminOtp(email, otp);
+        const user = await verifyAdminOtp(
+            email,
+            otp
+        );
+
         const token = createToken(user);
 
         return res.json({
-            message: "Admin OTP verified successfully",
+            message:
+                "Admin OTP verified successfully",
             token,
             admin: {
                 id: user._id,
@@ -430,6 +477,11 @@ const verifyAdminOtpUser = async (req, res) => {
             },
         });
     } catch (error) {
+        console.error(
+            "Verify admin OTP error:",
+            error
+        );
+
         return res.status(401).json({
             message: error.message,
         });

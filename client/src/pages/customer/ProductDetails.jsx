@@ -35,6 +35,7 @@ function ProductDetails() {
     const [reviewError, setReviewError] = useState("");
     const [reviewSuccess, setReviewSuccess] = useState("");
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [selectedReviewImage, setSelectedReviewImage] = useState("");
 
     useEffect(() => {
         let isMounted = true;
@@ -415,10 +416,32 @@ function ProductDetails() {
                             </div>
                             {review.title && <h4 className="product-review-title">{review.title}</h4>}
                             {(review.comment || review.body) && <p className="product-review-comment">{review.comment || review.body}</p>}
-                            {Array.isArray(review.images) && review.images.length > 0 && <div className="product-review-photos">{review.images.map((photo, index) => <a href={getPhotoUrl(photo)} target="_blank" rel="noreferrer" key={`${photo}-${index}`} aria-label={`Open review photo ${index + 1}`}><img src={getPhotoUrl(photo)} alt={`Customer review ${index + 1}`} loading="lazy" /></a>)}</div>}
+                            {Array.isArray(review.images) && review.images.length > 0 && <div className="product-review-photos">{review.images.map((photo, index) => <button type="button" className="product-review-photo-button" key={`${photo}-${index}`} onClick={() => setSelectedReviewImage(getPhotoUrl(photo))} aria-label={`Open review photo ${index + 1}`}><img src={getPhotoUrl(photo)} alt={`Customer review ${index + 1}`} loading="lazy" /></button>)}</div>}
                         </article>)}
                     </div>}
                 </section>
+
+                {selectedReviewImage && (
+                    <div
+                        className="review-image-modal-backdrop"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Review image preview"
+                        onClick={() => setSelectedReviewImage("")}
+                    >
+                        <div className="review-image-modal" onClick={(event) => event.stopPropagation()}>
+                            <button
+                                type="button"
+                                className="review-image-modal-close"
+                                onClick={() => setSelectedReviewImage("")}
+                                aria-label="Close image preview"
+                            >
+                                ×
+                            </button>
+                            <img src={selectedReviewImage} alt="Customer review" />
+                        </div>
+                    </div>
+                )}
 
                 <section className="related-products-section">
                     <h2>Related Products</h2>

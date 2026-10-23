@@ -108,6 +108,17 @@ function AdminLayout({ children, pageTitle = "Dashboard" }) {
                     </NavLink>
 
                     <NavLink
+                        to="/admin/contact-inbox"
+                        className={({ isActive }) =>
+                            isActive
+                                ? "admin-nav-link active"
+                                : "admin-nav-link"
+                        }
+                    >
+                        Contact Inbox
+                    </NavLink>
+
+                    <NavLink
                         to="/admin/profile"
                         className={({ isActive }) =>
                             isActive

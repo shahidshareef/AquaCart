@@ -1,0 +1,29 @@
+.info-page {
+    min-height: 60vh;
+    padding: 68px 24px 84px;
+    background: #f8fafc;
+    color: #0f172a;
+}
+.info-hero, .info-sections, .info-closing { width: 100%; max-width: 1000px; margin: 0 auto; }
+.info-hero { padding: 38px 0 48px; }
+.info-eyebrow { display: inline-block; margin-bottom: 18px; color: #0284c7; font-size: 12px; font-weight: 800; letter-spacing: 1.8px; }
+.info-hero h1 { max-width: 800px; margin: 0; font-size: clamp(36px, 5vw, 58px); line-height: 1.08; letter-spacing: -1.8px; }
+.info-hero > p { max-width: 760px; margin: 22px 0 0; color: #64748b; font-size: 18px; line-height: 1.8; }
+.info-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.info-section-card { display: flex; gap: 16px; padding: 26px; background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, .035); }
+.info-section-mark { display: flex; flex: 0 0 38px; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 12px; background: #e0f2fe; color: #0284c7; font-size: 18px; }
+.info-section-card h2 { margin: 2px 0 10px; font-size: 18px; letter-spacing: -.3px; }
+.info-section-card p { margin: 0; color: #64748b; font-size: 14px; line-height: 1.8; }
+.info-closing { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 28px; padding: 28px; border-radius: 18px; background: #0f172a; color: #fff; }
+.info-closing p { max-width: 650px; margin: 0; color: #cbd5e1; line-height: 1.7; }
+.info-action { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 12px; padding: 13px 18px; border-radius: 999px; background: #0ea5e9; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
+.info-action:hover { background: #0284c7; }
+@media (max-width: 700px) {
+    .info-page { padding: 42px 18px 56px; }
+    .info-hero { padding: 22px 0 32px; }
+    .info-hero h1 { letter-spacing: -1px; }
+    .info-hero > p { font-size: 16px; }
+    .info-sections { grid-template-columns: 1fr; }
+    .info-section-card { padding: 22px; }
+    .info-closing { align-items: flex-start; flex-direction: column; padding: 24px; }
+}

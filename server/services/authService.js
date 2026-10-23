@@ -1,9 +1,22 @@
+
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const PasswordResetToken = require("../models/PasswordResetToken");
+const {
+    sendEmailVerificationOtp,
+    sendAdminOtp,
+} = require("../utils/emailService");
 
 const passwordPattern =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+const generateEmailOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+const generateAdminOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 const registerUser = async (userData) => {
     const name = userData.name.trim();
@@ -37,11 +50,16 @@ const registerUser = async (userData) => {
 
     await user.save();
 
-    return user;
-};
+    try {
+        await sendEmailVerificationOtp(user);
+    } catch (error) {
+        console.error("Registration OTP email failed:", error.message);
+        throw new Error(
+            "Your account was created, but the verification email could not be sent. Please use Resend OTP."
+        );
+    }
 
-const generateEmailOtp = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return user;
 };
 
 const resendEmailOtp = async (email) => {
@@ -64,11 +82,16 @@ const resendEmailOtp = async (email) => {
 
     await user.save();
 
-    return user;
-};
+    try {
+        await sendEmailVerificationOtp(user);
+    } catch (error) {
+        console.error("Resend verification OTP email failed:", error.message);
+        throw new Error(
+            "OTP was generated, but the email could not be sent. Check the email configuration and try again."
+        );
+    }
 
-const generateAdminOtp = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return user;
 };
 
 const findResetToken = async (token) => {
@@ -128,6 +151,15 @@ const adminLogin = async (email, password) => {
         new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
+
+    try {
+        await sendAdminOtp(user);
+    } catch (error) {
+        console.error("Admin OTP email failed:", error.message);
+        throw new Error(
+            "Admin OTP could not be emailed. Check the server email configuration and try again."
+        );
+    }
 
     return user;
 };
@@ -226,7 +258,6 @@ const updateCustomerProfile = async (
 
     const emailIsChanging = normalizedEmail !== user.email;
 
-    // Require the current password only when the email is changing.
     if (emailIsChanging) {
         if (
             typeof currentPassword !== "string" ||

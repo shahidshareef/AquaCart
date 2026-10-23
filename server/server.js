@@ -21,6 +21,9 @@ const addressRoutes = require("./routes/addressRoutes");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const newsletterRoutes = require("./routes/newsletterRoutes");
+const contactRoutes = require("./routes/contactRoutes");
+const adminContactRoutes = require("./routes/adminContactRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 const roleMiddleware = require("./middleware/roleMiddleware");
 
@@ -47,6 +50,9 @@ const app = express();
     app.use("/api/orders", orderRoutes);
     app.use("/api/payments", paymentRoutes);
     app.use("/api/reviews", reviewRoutes);
+    app.use("/api/newsletter", newsletterRoutes);
+    app.use("/api/contact", contactRoutes);
+    app.use("/api/admin/contact-messages", authMiddleware, roleMiddleware("admin"), adminContactRoutes);
 
     
 const PORT = process.env.PORT || 5000;
