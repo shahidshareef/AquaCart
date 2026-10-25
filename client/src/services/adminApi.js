@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:5000";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export async function adminFetch(path, options = {}) {
     const token = localStorage.getItem("token");
@@ -9,7 +10,9 @@ export async function adminFetch(path, options = {}) {
         headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const url = /^https?:\/\//i.test(path) ? path : `${API_BASE_URL}${path}`;
+    const url = /^https?:\/\//i.test(path)
+        ? path
+        : `${API_BASE_URL}${path}`;
 
     return fetch(url, {
         ...options,
