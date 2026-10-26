@@ -4,7 +4,10 @@ import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 import "../../styles/CustomerReviews.css";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
 const RATING_FILTERS = [
     { value: "all", label: "All ratings" },
     { value: "5", label: "5 stars" },
@@ -29,24 +32,31 @@ function CustomerReviews() {
             setErrorMessage("");
 
             try {
-                const query = selectedRating === "all"
-                    ? ""
-                    : `?rating=${encodeURIComponent(selectedRating)}`;
+                const query =
+                    selectedRating === "all"
+                        ? ""
+                        : `?rating=${encodeURIComponent(selectedRating)}`;
+
                 const response = await fetch(
                     `${API_BASE_URL}/api/reviews${query}`,
                     { signal: controller.signal }
                 );
+
                 const result = await response.json().catch(() => ({}));
 
                 if (!response.ok) {
-                    throw new Error(result.message || "Unable to load customer reviews.");
+                    throw new Error(
+                        result.message || "Unable to load customer reviews."
+                    );
                 }
 
                 setReviews(Array.isArray(result.data) ? result.data : []);
             } catch (error) {
                 if (error.name !== "AbortError") {
                     console.error("Failed to fetch customer reviews:", error);
-                    setErrorMessage(error.message || "Unable to load customer reviews.");
+                    setErrorMessage(
+                        error.message || "Unable to load customer reviews."
+                    );
                     setReviews([]);
                 }
             } finally {
@@ -57,6 +67,7 @@ function CustomerReviews() {
         }
 
         fetchReviews();
+
         return () => controller.abort();
     }, [selectedRating, refreshKey]);
 
@@ -76,7 +87,9 @@ function CustomerReviews() {
 
     function formatDate(value) {
         if (!value) return "";
+
         const date = new Date(value);
+
         if (Number.isNaN(date.getTime())) return "";
 
         return date.toLocaleDateString("en-IN", {
@@ -88,10 +101,19 @@ function CustomerReviews() {
 
     function renderStars(rating) {
         const value = Number(rating) || 0;
+
         return (
-            <span className="customer-review-stars" aria-label={`${value} out of 5 stars`}>
+            <span
+                className="customer-review-stars"
+                aria-label={`${value} out of 5 stars`}
+            >
                 {Array.from({ length: 5 }, (_, index) => (
-                    <span key={index} className={index < value ? "filled" : ""}>★</span>
+                    <span
+                        key={index}
+                        className={index < value ? "filled" : ""}
+                    >
+                        ★
+                    </span>
                 ))}
             </span>
         );
@@ -103,13 +125,19 @@ function CustomerReviews() {
 
             <main className="customer-reviews-main">
                 <section className="customer-reviews-hero">
-                    <span className="customer-reviews-eyebrow">REAL CUSTOMER EXPERIENCES</span>
+                    <span className="customer-reviews-eyebrow">
+                        REAL CUSTOMER EXPERIENCES
+                    </span>
                     <h1>What our customers say</h1>
-                    <p>Honest feedback from customers who have purchased from AquaCart.</p>
-                    
+                    <p>
+                        Honest feedback from customers who have purchased from AquaCart.
+                    </p>
                 </section>
 
-                <section className="customer-reviews-content" aria-label="Customer reviews">
+                <section
+                    className="customer-reviews-content"
+                    aria-label="Customer reviews"
+                >
                     <div className="customer-reviews-toolbar">
                         <div>
                             <h2>Customer reviews</h2>
@@ -120,10 +148,15 @@ function CustomerReviews() {
                             <span>Filter by rating</span>
                             <select
                                 value={selectedRating}
-                                onChange={(event) => setSelectedRating(event.target.value)}
+                                onChange={(event) =>
+                                    setSelectedRating(event.target.value)
+                                }
                             >
                                 {RATING_FILTERS.map((filter) => (
-                                    <option key={filter.value} value={filter.value}>
+                                    <option
+                                        key={filter.value}
+                                        value={filter.value}
+                                    >
                                         {filter.label}
                                     </option>
                                 ))}
@@ -132,25 +165,41 @@ function CustomerReviews() {
                     </div>
 
                     {loading ? (
-                        <div className="customer-reviews-state">Loading customer reviews…</div>
+                        <div className="customer-reviews-state">
+                            Loading customer reviews…
+                        </div>
                     ) : errorMessage ? (
-                        <div className="customer-reviews-state error" role="alert">
+                        <div
+                            className="customer-reviews-state error"
+                            role="alert"
+                        >
                             <p>{errorMessage}</p>
-                            <button type="button" onClick={() => setRefreshKey((value) => value + 1)}>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setRefreshKey((value) => value + 1)
+                                }
+                            >
                                 Try again
                             </button>
                         </div>
                     ) : reviews.length === 0 ? (
                         <div className="customer-reviews-state">
-                            <span className="customer-reviews-empty-icon">☆</span>
+                            <span className="customer-reviews-empty-icon">
+                                ☆
+                            </span>
                             <h3>No reviews found</h3>
                             <p>
                                 {selectedRating === "all"
                                     ? "There are no approved customer reviews yet. Please check back soon."
                                     : `There are no approved ${selectedRating}-star reviews yet.`}
                             </p>
+
                             {selectedRating !== "all" && (
-                                <button type="button" onClick={() => setSelectedRating("all")}>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedRating("all")}
+                                >
                                     Show all ratings
                                 </button>
                             )}
@@ -160,59 +209,119 @@ function CustomerReviews() {
                             {reviews.map((review) => {
                                 const image = getProductImage(review.product);
                                 const productId = review.product?._id;
-                                const customerName = review.user?.name || "AquaCart customer";
+                                const customerName =
+                                    review.user?.name || "AquaCart customer";
 
                                 return (
-                                    <article className="customer-review-card" key={review._id}>
+                                    <article
+                                        className="customer-review-card"
+                                        key={review._id}
+                                    >
                                         <div className="customer-review-product">
                                             {image ? (
-                                                <img src={image} alt={review.product?.name || "Reviewed product"} loading="lazy" />
+                                                <img
+                                                    src={image}
+                                                    alt={
+                                                        review.product?.name ||
+                                                        "Reviewed product"
+                                                    }
+                                                    loading="lazy"
+                                                />
                                             ) : (
-                                                <div className="customer-review-product-placeholder" aria-hidden="true">💧</div>
+                                                <div
+                                                    className="customer-review-product-placeholder"
+                                                    aria-hidden="true"
+                                                >
+                                                    💧
+                                                </div>
                                             )}
+
                                             <div className="customer-review-product-info">
-                                                <span className="customer-review-product-label">REVIEWED PRODUCT</span>
+                                                <span className="customer-review-product-label">
+                                                    REVIEWED PRODUCT
+                                                </span>
+
                                                 {productId ? (
-                                                    <Link to={`/products/${productId}`} className="customer-review-product-name">
-                                                        {review.product?.name || "Product unavailable"}
+                                                    <Link
+                                                        to={`/products/${productId}`}
+                                                        className="customer-review-product-name"
+                                                    >
+                                                        {review.product?.name ||
+                                                            "Product unavailable"}
                                                     </Link>
                                                 ) : (
                                                     <strong className="customer-review-product-name">
-                                                        {review.product?.name || "Product unavailable"}
+                                                        {review.product?.name ||
+                                                            "Product unavailable"}
                                                     </strong>
                                                 )}
-                                                <span className="customer-review-date">{formatDate(review.createdAt)}</span>
+
+                                                <span className="customer-review-date">
+                                                    {formatDate(review.createdAt)}
+                                                </span>
                                             </div>
                                         </div>
 
                                         <div className="customer-review-body">
                                             <div className="customer-review-rating-row">
                                                 {renderStars(review.rating)}
-                                                <strong>{Number(review.rating)}.0 / 5</strong>
+                                                <strong>
+                                                    {Number(review.rating)}.0 / 5
+                                                </strong>
                                             </div>
+
                                             <h3>{review.title}</h3>
-                                            <p className="customer-review-comment">{review.comment}</p>
-                                            {Array.isArray(review.images) && review.images.length > 0 && (
-                                                <div className="customer-review-photos">
-                                                    {review.images.map((reviewImage, index) => {
-                                                        const photoUrl = /^https?:\/\//i.test(reviewImage)
-                                                            ? reviewImage
-                                                            : `${API_BASE_URL}${reviewImage.startsWith("/") ? reviewImage : `/${reviewImage}`}`;
-                                                        return (
-                                                            <a href={photoUrl} target="_blank" rel="noreferrer" key={`${review._id}-photo-${index}`}>
-                                                                <img src={photoUrl} alt={`Customer review photo ${index + 1}`} loading="lazy" />
-                                                            </a>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+
+                                            <p className="customer-review-comment">
+                                                {review.comment}
+                                            </p>
+
+                                            {Array.isArray(review.images) &&
+                                                review.images.length > 0 && (
+                                                    <div className="customer-review-photos">
+                                                        {review.images.map(
+                                                            (reviewImage, index) => {
+                                                                const photoUrl =
+                                                                    /^https?:\/\//i.test(
+                                                                        reviewImage
+                                                                    )
+                                                                        ? reviewImage
+                                                                        : `${API_BASE_URL}${reviewImage.startsWith("/") ? reviewImage : `/${reviewImage}`}`;
+
+                                                                return (
+                                                                    <a
+                                                                        href={photoUrl}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        key={`${review._id}-photo-${index}`}
+                                                                    >
+                                                                        <img
+                                                                            src={photoUrl}
+                                                                            alt={`Customer review photo ${index + 1}`}
+                                                                            loading="lazy"
+                                                                        />
+                                                                    </a>
+                                                                );
+                                                            }
+                                                        )}
+                                                    </div>
+                                                )}
+
                                             <div className="customer-review-author">
-                                                <span className="customer-review-avatar" aria-hidden="true">
-                                                    {customerName.charAt(0).toUpperCase()}
+                                                <span
+                                                    className="customer-review-avatar"
+                                                    aria-hidden="true"
+                                                >
+                                                    {customerName
+                                                        .charAt(0)
+                                                        .toUpperCase()}
                                                 </span>
+
                                                 <span>
                                                     <strong>{customerName}</strong>
-                                                    <small>Verified purchase review</small>
+                                                    <small>
+                                                        Verified purchase review
+                                                    </small>
                                                 </span>
                                             </div>
                                         </div>

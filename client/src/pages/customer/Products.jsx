@@ -4,12 +4,17 @@ import "../../styles/Products.css";
 import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
 function Products() {
     const navigate = useNavigate();
 
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [sort, setSort] = useState("featured");
@@ -19,51 +24,60 @@ function Products() {
         currentPage: 1,
         totalPages: 1,
         totalProducts: 0,
-        limit: 9
+        limit: 8,
     });
 
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchCategories() {
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/products/categories"
+                    `${API_BASE_URL}/api/products/categories`,
+                    { signal: controller.signal }
                 );
 
                 const result = await response.json();
 
                 if (!response.ok) {
                     throw new Error(
-                        result.message || "Failed to fetch categories"
+                        result.message || "Failed to fetch categories."
                     );
                 }
 
                 setCategories(
-                    result.data.filter(
+                    (result.data || []).filter(
                         (category) => category.status === "active"
                     )
                 );
             } catch (error) {
-                console.log(error);
+                if (error.name !== "AbortError") {
+                    console.error("Failed to fetch categories:", error);
+                }
             }
         }
 
         fetchCategories();
+
+        return () => controller.abort();
     }, []);
 
-    // Reset pagination when search, category, or sort changes
     useEffect(() => {
         setCurrentPage(1);
     }, [search, selectedCategory, sort]);
 
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchProducts() {
             setLoading(true);
+            setError("");
 
             try {
                 const params = new URLSearchParams();
 
-                if (search) {
-                    params.append("search", search);
+                if (search.trim()) {
+                    params.append("search", search.trim());
                 }
 
                 if (selectedCategory) {
@@ -78,27 +92,45 @@ function Products() {
                 params.append("limit", 8);
 
                 const response = await fetch(
-                    `http://localhost:5000/api/products?${params.toString()}`
+                    `${API_BASE_URL}/api/products?${params.toString()}`,
+                    { signal: controller.signal }
                 );
 
                 const result = await response.json();
 
                 if (!response.ok) {
                     throw new Error(
-                        result.message || "Failed to fetch products"
+                        result.message || "Failed to fetch products."
                     );
                 }
 
-                setProducts(result.data);
-                setPagination(result.pagination);
+                setProducts(Array.isArray(result.data) ? result.data : []);
+                setPagination(
+                    result.pagination || {
+                        currentPage: 1,
+                        totalPages: 1,
+                        totalProducts: 0,
+                        limit: 8,
+                    }
+                );
             } catch (error) {
-                console.log(error);
+                if (error.name !== "AbortError") {
+                    console.error("Failed to fetch products:", error);
+                    setProducts([]);
+                    setError(
+                        "Unable to load products. Please refresh the page and try again."
+                    );
+                }
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
             }
         }
 
         fetchProducts();
+
+        return () => controller.abort();
     }, [search, selectedCategory, sort, currentPage]);
 
     return (
@@ -106,8 +138,6 @@ function Products() {
             <Header />
 
             <main className="products-page">
-
-                {/* Page Header */}
                 <section className="products-header">
                     <div className="products-breadcrumb">
                         COLLECTION / WATER BOTTLES
@@ -122,19 +152,14 @@ function Products() {
                     </p>
                 </section>
 
-                {/* Products Content */}
                 <section className="products-section">
-
-                    {/* Toolbar */}
                     <div className="products-toolbar">
-
-                        {/* Search */}
                         <div className="products-search">
                             <span className="search-icon">⌕</span>
 
                             <input
                                 type="text"
-                                placeholder="Search products (e.g. Navy, 750ml, Ceramic..."
+                                placeholder="Search products (e.g. Navy, 750ml, Ceramic...)"
                                 value={search}
                                 onChange={(event) =>
                                     setSearch(event.target.value)
@@ -142,11 +167,8 @@ function Products() {
                             />
                         </div>
 
-                        {/* Sort + Count */}
                         <div className="products-sort-area">
-                            <label htmlFor="product-sort">
-                                Sort by:
-                            </label>
+                            <label htmlFor="product-sort">Sort by:</label>
 
                             <select
                                 id="product-sort"
@@ -155,18 +177,11 @@ function Products() {
                                     setSort(event.target.value)
                                 }
                             >
-                                <option value="featured">
-                                    Featured
-                                </option>
-
-                                <option value="newest">
-                                    Newest
-                                </option>
-
+                                <option value="featured">Featured</option>
+                                <option value="newest">Newest</option>
                                 <option value="price-low">
                                     Price: Low to High
                                 </option>
-
                                 <option value="price-high">
                                     Price: High to Low
                                 </option>
@@ -178,9 +193,7 @@ function Products() {
                         </div>
                     </div>
 
-                    {/* Category Filters */}
                     <div className="products-filters">
-
                         <button
                             type="button"
                             className={
@@ -211,11 +224,12 @@ function Products() {
                         ))}
                     </div>
 
-                    {/* Product Grid */}
                     {loading ? (
                         <p className="products-message">
                             Loading products...
                         </p>
+                    ) : error ? (
+                        <p className="products-message">{error}</p>
                     ) : products.length === 0 ? (
                         <p className="products-message">
                             No products available.
@@ -223,29 +237,38 @@ function Products() {
                     ) : (
                         <div className="products-grid">
                             {products.map((product) => {
-                                const firstVariant =
-                                    product.variants?.[0];
+                                const firstVariant = product.variants?.[0];
+                                const imagePath = product.images?.[0];
+
+                                const imageUrl = imagePath
+                                    ? /^https?:\/\//i.test(imagePath)
+                                        ? imagePath
+                                        : `${API_BASE_URL}${
+                                              imagePath.startsWith("/")
+                                                  ? ""
+                                                  : "/"
+                                          }${imagePath}`
+                                    : "/images/1.png";
 
                                 return (
                                     <article
                                         className="product-card"
                                         key={product._id}
                                     >
-                                        {/* Product Image */}
                                         <div className="product-image">
                                             <img
-                                                src={
-                                                    product.images?.length > 0
-                                                        ? `http://localhost:5000${product.images[0]}`
-                                                        : "/images/1.png"
-                                                }
+                                                src={imageUrl}
                                                 alt={product.name}
+                                                onError={(event) => {
+                                                    event.currentTarget.onerror =
+                                                        null;
+                                                    event.currentTarget.src =
+                                                        "/images/1.png";
+                                                }}
                                             />
                                         </div>
 
-                                        {/* Product Information */}
                                         <div className="product-info">
-
                                             {firstVariant && (
                                                 <p className="product-specification">
                                                     {firstVariant.size} ·
@@ -295,7 +318,6 @@ function Products() {
                     )}
                 </section>
 
-                {/* Pagination */}
                 <section className="products-pagination">
                     <p>
                         Showing{" "}
@@ -313,13 +335,12 @@ function Products() {
                     </p>
 
                     <div className="pagination-controls">
-
                         <button
                             type="button"
-                            disabled={pagination.currentPage === 1}
+                            disabled={pagination.currentPage <= 1}
                             onClick={() =>
                                 setCurrentPage(
-                                    pagination.currentPage - 1
+                                    Math.max(1, pagination.currentPage - 1)
                                 )
                             }
                         >
@@ -338,9 +359,7 @@ function Products() {
                                         ? "active"
                                         : ""
                                 }
-                                onClick={() =>
-                                    setCurrentPage(page)
-                                }
+                                onClick={() => setCurrentPage(page)}
                             >
                                 {page}
                             </button>
@@ -349,7 +368,7 @@ function Products() {
                         <button
                             type="button"
                             disabled={
-                                pagination.currentPage ===
+                                pagination.currentPage >=
                                 pagination.totalPages
                             }
                             onClick={() =>
@@ -360,7 +379,6 @@ function Products() {
                         >
                             Next &gt;
                         </button>
-
                     </div>
                 </section>
             </main>

@@ -4,6 +4,8 @@ import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 import "../../styles/Profile.css";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, "");
+
 const emptyAddress = {
     fullName: "",
     phone: "",
@@ -30,6 +32,7 @@ function Profile() {
     const [orderError, setOrderError] = useState("");
     const [showOrders, setShowOrders] = useState(false);
     const [ordersFetched, setOrdersFetched] = useState(false);
+    const [reviewEligibilityByProduct, setReviewEligibilityByProduct] = useState({});
 
     // Profile editing
     const [isEditing, setIsEditing] = useState(false);
@@ -98,7 +101,7 @@ function Profile() {
         const fetchAddresses = async (token) => {
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/addresses",
+                    `${API_BASE_URL}/api/addresses`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -148,7 +151,7 @@ function Profile() {
 
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/auth/profile",
+                    `${API_BASE_URL}/api/auth/profile`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -331,7 +334,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/auth/profile",
+                `${API_BASE_URL}/api/auth/profile`,
                 {
                     method: "PUT",
                     headers: {
@@ -421,7 +424,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/auth/change-password",
+                `${API_BASE_URL}/api/auth/change-password`,
                 {
                     method: "PUT",
                     headers: {
@@ -484,7 +487,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/orders/my-orders",
+                `${API_BASE_URL}/api/orders/my-orders`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -502,9 +505,79 @@ function Profile() {
             }
 
             const data = await response.json();
+            const fetchedOrders = Array.isArray(data.data) ? data.data : [];
 
-            setOrders(Array.isArray(data.data) ? data.data : []);
+            setOrders(fetchedOrders);
             setOrdersFetched(true);
+
+            // Check review eligibility for each unique product in delivered orders.
+            const deliveredProductIds = [
+                ...new Set(
+                    fetchedOrders
+                        .filter((order) => order.orderStatus === "delivered")
+                        .flatMap((order) =>
+                            (order.orderItems || [])
+                                .map((item) => item.product?._id)
+                                .filter(Boolean)
+                        )
+                ),
+            ];
+
+            setReviewEligibilityByProduct((previous) => {
+                const next = { ...previous };
+                deliveredProductIds.forEach((productId) => {
+                    next[productId] = { ...(next[productId] || {}), loading: true };
+                });
+                return next;
+            });
+
+            await Promise.all(
+                deliveredProductIds.map(async (productId) => {
+                    try {
+                        const eligibilityResponse = await fetch(
+                            `${API_BASE_URL}/api/reviews/eligibility/${productId}`,
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    "Cache-Control": "no-cache",
+                                },
+                                cache: "no-store",
+                            }
+                        );
+                        const eligibilityResult = await eligibilityResponse.json();
+
+                        if (!eligibilityResponse.ok) {
+                            throw new Error(
+                                eligibilityResult.message ||
+                                    "Unable to check review eligibility."
+                            );
+                        }
+
+                        setReviewEligibilityByProduct((previous) => ({
+                            ...previous,
+                            [productId]: {
+                                loading: false,
+                                ...(eligibilityResult.data || {}),
+                            },
+                        }));
+                    } catch (eligibilityError) {
+                        console.error(
+                            "Failed to check review eligibility:",
+                            productId,
+                            eligibilityError
+                        );
+                        setReviewEligibilityByProduct((previous) => ({
+                            ...previous,
+                            [productId]: {
+                                loading: false,
+                                canReview: false,
+                                alreadyReviewed: false,
+                                checkFailed: true,
+                            },
+                        }));
+                    }
+                })
+            );
         } catch (error) {
             setOrderError(error.message);
             setOrdersFetched(false);
@@ -641,7 +714,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/orders/${selectedOrderAction._id}/cancel`,
+                `${API_BASE_URL}/api/orders/${selectedOrderAction._id}/cancel`,
                 {
                     method: "POST",
                     headers: {
@@ -713,7 +786,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/orders/${selectedOrderAction._id}/return-request`,
+                `${API_BASE_URL}/api/orders/${selectedOrderAction._id}/return-request`,
                 {
                     method: "POST",
                     headers: {
@@ -814,7 +887,7 @@ function Profile() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/addresses/${editingAddress._id}`,
+                `${API_BASE_URL}/api/addresses/${editingAddress._id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -1481,7 +1554,34 @@ function Profile() {
 
                                                             {order.orderStatus === "delivered" && item.product?._id && (
                                                                 <div className="profile-order-review-area">
-                                                                    {!item.reviewSubmitted ? (
+                                                                    {reviewEligibilityByProduct[item.product._id]?.loading ||
+                                                                    !reviewEligibilityByProduct[item.product._id] ? (
+                                                                        <span className="profile-review-status">
+                                                                            Checking review...
+                                                                        </span>
+                                                                    ) : reviewEligibilityByProduct[item.product._id]?.checkFailed ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            className="profile-write-review-button"
+                                                                            onClick={() => loadOrders(true)}
+                                                                        >
+                                                                            Check Review Status
+                                                                        </button>
+                                                                    ) : reviewEligibilityByProduct[item.product._id]?.alreadyReviewed ? (
+                                                                        reviewEligibilityByProduct[item.product._id]?.reviewStatus === "pending" ? (
+                                                                            <span className="profile-review-status profile-review-status-pending">
+                                                                                Review pending approval
+                                                                            </span>
+                                                                        ) : reviewEligibilityByProduct[item.product._id]?.reviewStatus === "approved" ? (
+                                                                            <span className="profile-review-status profile-review-status-approved">
+                                                                                Review submitted
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="profile-review-status profile-review-status-rejected">
+                                                                                Review already submitted · Rejected
+                                                                            </span>
+                                                                        )
+                                                                    ) : reviewEligibilityByProduct[item.product._id]?.canReview ? (
                                                                         <Link
                                                                             to={`/products/${item.product._id}`}
                                                                             state={{ openReview: true }}
@@ -1489,19 +1589,11 @@ function Profile() {
                                                                         >
                                                                             Write a Review
                                                                         </Link>
-                                                                    ) : item.reviewStatus === "pending" ? (
-                                                                        <span className="profile-review-status profile-review-status-pending">
-                                                                            Review pending approval
+                                                                    ) : (
+                                                                        <span className="profile-review-status">
+                                                                            Review unavailable
                                                                         </span>
-                                                                    ) : item.reviewStatus === "approved" ? (
-                                                                        <span className="profile-review-status profile-review-status-approved">
-                                                                            Review approved
-                                                                        </span>
-                                                                    ) : item.reviewStatus === "rejected" ? (
-                                                                        <span className="profile-review-status profile-review-status-rejected">
-                                                                            Review submitted · Rejected
-                                                                        </span>
-                                                                    ) : null}
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
