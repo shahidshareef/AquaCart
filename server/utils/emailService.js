@@ -1,13 +1,9 @@
-const nodemailer = require("nodemailer");
-
-const mailService = process.env.MAIL_SERVICE || "gmail";
-const mailUser = process.env.MAIL_USER;
-const mailPassword = process.env.MAIL_PASSWORD;
-const mailFrom = process.env.MAIL_FROM || mailUser;
-
 const clientUrl = process.env.CLIENT_URL
     ? process.env.CLIENT_URL.replace(/\/+$/, "")
     : "";
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const mailFrom = process.env.MAIL_FROM || "onboarding@resend.dev";
 
 if (!clientUrl) {
     console.warn(
@@ -15,19 +11,11 @@ if (!clientUrl) {
     );
 }
 
-if (!mailUser || !mailPassword) {
+if (!resendApiKey) {
     console.warn(
-        "Email service warning: MAIL_USER or MAIL_PASSWORD is missing from .env"
+        "Email service warning: RESEND_API_KEY is missing from the server environment."
     );
 }
-
-const transporter = nodemailer.createTransport({
-    service: mailService,
-    auth: {
-        user: mailUser,
-        pass: mailPassword,
-    },
-});
 
 const escapeHtml = (value = "") => {
     return String(value)
@@ -39,29 +27,50 @@ const escapeHtml = (value = "") => {
 };
 
 const sendEmail = async ({ to, subject, text, html }) => {
-    if (!mailUser || !mailPassword) {
+    if (!resendApiKey) {
         throw new Error(
-            "Email service is not configured. Please check MAIL_USER and MAIL_PASSWORD in the server .env file."
+            "Email service is not configured. Please add RESEND_API_KEY to the server environment."
         );
     }
 
     try {
-        const info = await transporter.sendMail({
-            from: mailFrom,
-            to,
-            subject,
-            text,
-            html,
+        const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                from: mailFrom,
+                to: [to],
+                subject,
+                text,
+                html,
+            }),
         });
 
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const errorMessage =
+                result.message ||
+                result.error ||
+                `Resend API request failed with status ${response.status}`;
+
+            console.error("Resend email failed:", errorMessage);
+            throw new Error(errorMessage);
+        }
+
         console.log(
-            `Email sent successfully to ${to}. Message ID: ${info.messageId}`
+            `Email accepted by Resend for ${to}. Email ID: ${result.id}`
         );
 
-        return info;
+        return {
+            messageId: result.id,
+            ...result,
+        };
     } catch (error) {
         console.error("Email sending failed:", error.message);
-
         throw new Error(`Unable to send email. ${error.message}`);
     }
 };
