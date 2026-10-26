@@ -3,7 +3,8 @@ import Header from "../../components/common/Header.jsx";
 import Footer from "../../components/common/Footer.jsx";
 import "../../styles/ContactUs.css";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const initialForm = {
     name: "",
@@ -21,7 +22,11 @@ function ContactUs() {
 
     function handleChange(event) {
         const { name, value } = event.target;
-        setForm((current) => ({ ...current, [name]: value }));
+
+        setForm((current) => ({
+            ...current,
+            [name]: value,
+        }));
     }
 
     async function handleSubmit(event) {
@@ -35,21 +40,29 @@ function ContactUs() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),
             });
+
             const result = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                throw new Error(result.message || "Your message could not be submitted.");
+                throw new Error(
+                    result.message || "Your message could not be submitted."
+                );
             }
 
             setFeedback({
                 type: "success",
-                text: result.message || "Your message has been sent to the AquaCart support team.",
+                text:
+                    result.message ||
+                    "Your message has been sent to the AquaCart support team.",
             });
+
             setForm(initialForm);
         } catch (error) {
             setFeedback({
                 type: "error",
-                text: error.message || "Something went wrong. Please try again.",
+                text:
+                    error.message ||
+                    "Something went wrong. Please try again.",
             });
         } finally {
             setSubmitting(false);
@@ -59,16 +72,33 @@ function ContactUs() {
     return (
         <>
             <Header />
+
             <main className="contact-page">
                 <section className="contact-intro">
-                    <span className="contact-eyebrow">WE'RE HERE TO HELP</span>
+                    <span className="contact-eyebrow">
+                        WE'RE HERE TO HELP
+                    </span>
+
                     <h1>Let's talk.</h1>
-                    <p>Questions about a product, an order, or something else? Send a message and the AquaCart admin team can review it from the contact inbox.</p>
+
+                    <p>
+                        Questions about a product, an order, or something
+                        else? Send a message and the AquaCart admin team can
+                        review it from the contact inbox.
+                    </p>
+
                     <div className="contact-help-note">
                         <span aria-hidden="true">✉</span>
+
                         <div>
-                            <strong>Your message goes to our support inbox</strong>
-                            <p>We save your message securely in the store database so the admin team can follow up.</p>
+                            <strong>
+                                Your message goes to our support inbox
+                            </strong>
+
+                            <p>
+                                We save your message securely in the store
+                                database so the admin team can follow up.
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -81,7 +111,10 @@ function ContactUs() {
                     </div>
 
                     {feedback.text && (
-                        <div className={`contact-feedback ${feedback.type}`} role="status">
+                        <div
+                            className={`contact-feedback ${feedback.type}`}
+                            role="status"
+                        >
                             {feedback.text}
                         </div>
                     )}
@@ -90,45 +123,126 @@ function ContactUs() {
                         <div className="contact-field-grid">
                             <label>
                                 Your name *
-                                <input name="name" value={form.name} onChange={handleChange} required minLength={2} maxLength={80} autoComplete="name" placeholder="Enter your name" />
+                                <input
+                                    name="name"
+                                    value={form.name}
+                                    onChange={handleChange}
+                                    required
+                                    minLength={2}
+                                    maxLength={80}
+                                    autoComplete="name"
+                                    placeholder="Enter your name"
+                                />
                             </label>
+
                             <label>
                                 Email address *
-                                <input type="email" name="email" value={form.email} onChange={handleChange} required maxLength={254} autoComplete="email" placeholder="you@example.com" />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    required
+                                    maxLength={254}
+                                    autoComplete="email"
+                                    placeholder="you@example.com"
+                                />
                             </label>
+
                             <label>
                                 What is this about? *
-                                <select name="category" value={form.category} onChange={handleChange} required>
-                                    <option value="general">General question</option>
-                                    <option value="order">Order or delivery</option>
-                                    <option value="product">Product question</option>
-                                    <option value="return">Return or warranty</option>
-                                    <option value="payment">Payment issue</option>
-                                    <option value="technical">Website problem</option>
+                                <select
+                                    name="category"
+                                    value={form.category}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="general">
+                                        General question
+                                    </option>
+                                    <option value="order">
+                                        Order or delivery
+                                    </option>
+                                    <option value="product">
+                                        Product question
+                                    </option>
+                                    <option value="return">
+                                        Return or warranty
+                                    </option>
+                                    <option value="payment">
+                                        Payment issue
+                                    </option>
+                                    <option value="technical">
+                                        Website problem
+                                    </option>
                                     <option value="other">Other</option>
                                 </select>
                             </label>
+
                             <label>
-                                Order reference <span className="contact-optional">(optional)</span>
-                                <input name="orderReference" value={form.orderReference} onChange={handleChange} maxLength={80} placeholder="e.g. order number" />
+                                Order reference{" "}
+                                <span className="contact-optional">
+                                    (optional)
+                                </span>
+
+                                <input
+                                    name="orderReference"
+                                    value={form.orderReference}
+                                    onChange={handleChange}
+                                    maxLength={80}
+                                    placeholder="e.g. order number"
+                                />
                             </label>
                         </div>
+
                         <label>
                             Subject *
-                            <input name="subject" value={form.subject} onChange={handleChange} required minLength={3} maxLength={120} placeholder="A short summary of your issue" />
+                            <input
+                                name="subject"
+                                value={form.subject}
+                                onChange={handleChange}
+                                required
+                                minLength={3}
+                                maxLength={120}
+                                placeholder="A short summary of your issue"
+                            />
                         </label>
+
                         <label>
                             Message *
-                            <textarea name="message" value={form.message} onChange={handleChange} required minLength={10} maxLength={3000} rows={6} placeholder="Tell us what happened and how we can help…" />
-                            <span className="contact-character-count">{form.message.length}/3000 characters</span>
+                            <textarea
+                                name="message"
+                                value={form.message}
+                                onChange={handleChange}
+                                required
+                                minLength={10}
+                                maxLength={3000}
+                                rows={6}
+                                placeholder="Tell us what happened and how we can help…"
+                            />
+
+                            <span className="contact-character-count">
+                                {form.message.length}/3000 characters
+                            </span>
                         </label>
-                        <button className="contact-submit-button" type="submit" disabled={submitting}>
-                            {submitting ? "Sending message…" : "Send message"}
-                            {!submitting && <span aria-hidden="true">→</span>}
+
+                        <button
+                            className="contact-submit-button"
+                            type="submit"
+                            disabled={submitting}
+                        >
+                            {submitting
+                                ? "Sending message…"
+                                : "Send message"}
+
+                            {!submitting && (
+                                <span aria-hidden="true">→</span>
+                            )}
                         </button>
                     </form>
                 </section>
             </main>
+
             <Footer />
         </>
     );

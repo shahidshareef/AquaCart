@@ -1,5 +1,5 @@
-const path = require("path");
-const fs = require("fs");
+
+const cloudinary = require("cloudinary").v2;
 
 const {
     getReviewEligibility,
@@ -12,7 +12,6 @@ const {
 function sendError(res, error) {
     const statusCode = error.statusCode || 500;
 
-    // Log the actual error so backend failures can be diagnosed.
     console.error("[AquaCart Reviews API Error]", {
         message: error.message,
         statusCode,
@@ -24,6 +23,26 @@ function sendError(res, error) {
             ? "Review request failed."
             : error.message
     });
+}
+
+async function removeUploadedImages(files) {
+    for (const file of files || []) {
+        // CloudinaryStorage provides the Cloudinary public ID as file.filename.
+        if (!file.filename) {
+            continue;
+        }
+
+        try {
+            await cloudinary.uploader.destroy(file.filename, {
+                resource_type: "image"
+            });
+        } catch (error) {
+            console.error(
+                "[AquaCart] Failed to remove rejected review image:",
+                error.message
+            );
+        }
+    }
 }
 
 async function getReviewEligibilityController(req, res) {
@@ -44,9 +63,8 @@ async function getReviewEligibilityController(req, res) {
 
 async function submitReviewController(req, res) {
     try {
-        const imagePaths = (req.files || []).map(
-            (file) => `/uploads/${file.filename}`
-        );
+        // Cloudinary returns the hosted HTTPS URL in file.path.
+        const imagePaths = (req.files || []).map((file) => file.path);
 
         const review = await submitReview(
             req.user.userId,
@@ -59,20 +77,8 @@ async function submitReviewController(req, res) {
             data: review
         });
     } catch (error) {
-        // Remove files uploaded for a submission that failed.
-        for (const file of req.files || []) {
-            if (file.path) {
-                fs.unlink(path.resolve(file.path), (unlinkError) => {
-                    if (unlinkError) {
-                        console.error(
-                            "[AquaCart] Failed to remove rejected review upload:",
-                            unlinkError.message
-                        );
-                    }
-                });
-            }
-        }
-
+        // Avoid leaving uploaded images behind when review submission fails.
+        await removeUploadedImages(req.files);
         return sendError(res, error);
     }
 }

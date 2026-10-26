@@ -1,8 +1,13 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/Home.css";
 import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
+
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 function Home() {
     const navigate = useNavigate();
@@ -14,7 +19,7 @@ function Home() {
         async function fetchFeaturedProducts() {
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/products/featured"
+                    `${API_BASE_URL}/api/products/featured`
                 );
 
                 const result = await response.json();
@@ -35,6 +40,22 @@ function Home() {
 
         fetchFeaturedProducts();
     }, []);
+
+    function getProductImageUrl(imagePath) {
+        if (!imagePath) {
+            return "/images/1.png";
+        }
+
+        if (/^https?:\/\//i.test(imagePath)) {
+            return imagePath;
+        }
+
+        const normalizedPath = imagePath.startsWith("/")
+            ? imagePath
+            : `/${imagePath}`;
+
+        return `${API_BASE_URL}${normalizedPath}`;
+    }
 
     return (
         <>
@@ -77,7 +98,6 @@ function Home() {
                     </div>
                 </section>
 
-
                 {/* Feature Highlights */}
                 <section className="home-features">
 
@@ -119,7 +139,6 @@ function Home() {
 
                 </section>
 
-
                 {/* Featured Products */}
                 <section className="home-featured-products">
 
@@ -148,7 +167,6 @@ function Home() {
 
                     </div>
 
-
                     <div className="featured-products-grid">
 
                         {loading ? (
@@ -168,11 +186,9 @@ function Home() {
 
                                         <img
                                             className="featured-product-image"
-                                            src={
-                                                product.images?.length > 0
-                                                    ? `http://localhost:5000${product.images[0]}`
-                                                    : "/images/1.png"
-                                            }
+                                            src={getProductImageUrl(
+                                                product.images?.[0]
+                                            )}
                                             alt={product.name}
                                         />
 

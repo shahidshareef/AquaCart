@@ -280,9 +280,28 @@ const adminLoginUser = async (req, res) => {
 
         const user = await adminLogin(email, password);
 
-        return res.json({
+        // Verified admins can enter the dashboard directly.
+        if (user.isEmailVerified === true) {
+            const token = createToken(user);
+
+            return res.status(200).json({
+                message: "Admin login successful.",
+                requiresOtp: false,
+                token,
+                admin: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                },
+            });
+        }
+
+        // Unverified admins must complete OTP verification.
+        return res.status(200).json({
             message:
-                "Admin login successful. Please check your email for the OTP.",
+                "Please check your email for the OTP to complete admin login.",
+            requiresOtp: true,
             admin: {
                 id: user._id,
                 name: user.name,

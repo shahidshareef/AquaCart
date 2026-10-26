@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import "../../styles/Reviews.css";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 function Reviews() {
     const [reviews, setReviews] = useState([]);

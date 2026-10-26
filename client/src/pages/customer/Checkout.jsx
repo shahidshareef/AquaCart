@@ -6,6 +6,9 @@ import Footer from "../../components/common/Footer";
 
 import "../../styles/Checkout.css";
 
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 const emptyAddressForm = {
     fullName: "",
     phone: "",
@@ -113,7 +116,7 @@ function Checkout() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/addresses",
+                `${API_BASE_URL}/api/addresses`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -170,7 +173,7 @@ function Checkout() {
             setSummaryError("");
 
             const response = await fetch(
-                "http://localhost:5000/api/checkout/summary",
+                `${API_BASE_URL}/api/checkout/summary`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -224,7 +227,7 @@ function Checkout() {
             }
 
             const response = await fetch(
-                "http://localhost:5000/api/checkout/apply-coupon",
+                `${API_BASE_URL}/api/checkout/apply-coupon`,
                 {
                     method: "POST",
                     headers: {
@@ -279,7 +282,7 @@ function Checkout() {
             }
 
             const response = await fetch(
-                "http://localhost:5000/api/checkout/summary",
+                `${API_BASE_URL}/api/checkout/summary`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -357,7 +360,7 @@ function Checkout() {
             // Cash on Delivery
             if (paymentMethod === "cod") {
                 const response = await fetch(
-                    "http://localhost:5000/api/orders",
+                    `${API_BASE_URL}/api/orders`,
                     {
                         method: "POST",
                         headers: {
@@ -407,7 +410,7 @@ function Checkout() {
                 // Backend calculates the final amount and creates
                 // a pending order and payment record.
                 const response = await fetch(
-                    "http://localhost:5000/api/payments/create-order",
+                    `${API_BASE_URL}/api/payments/create-order`,
                     {
                         method: "POST",
                         headers: {
@@ -463,7 +466,7 @@ function Checkout() {
                             setPlacingOrder(true);
 
                             const verificationResponse = await fetch(
-                                "http://localhost:5000/api/payments/verify-payment",
+                                `${API_BASE_URL}/api/payments/verify-payment`,
                                 {
                                     method: "POST",
                                     headers: {
@@ -613,8 +616,8 @@ function Checkout() {
 
             const response = await fetch(
                 isEditing
-                    ? `http://localhost:5000/api/addresses/${editingAddressId}`
-                    : "http://localhost:5000/api/addresses",
+                    ? `${API_BASE_URL}/api/addresses/${editingAddressId}`
+                    : `${API_BASE_URL}/api/addresses`,
                 {
                     method: isEditing ? "PUT" : "POST",
                     headers: {
@@ -714,7 +717,7 @@ function Checkout() {
             }
 
             const response = await fetch(
-                `http://localhost:5000/api/addresses/${addressId}`,
+                `${API_BASE_URL}/api/addresses/${addressId}`,
                 {
                     method: "DELETE",
                     headers: {

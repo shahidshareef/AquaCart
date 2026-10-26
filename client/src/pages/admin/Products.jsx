@@ -1,4 +1,6 @@
 import { adminFetch } from "../../services/adminApi";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
@@ -42,7 +44,7 @@ function Products() {
         try {
 
             const response = await adminFetch(
-                `http://localhost:5000/api/admin/products/${productId}`,
+                `/api/admin/products/${productId}`,
                 {
                     method: "DELETE"
                 }
@@ -107,7 +109,7 @@ function Products() {
         async function getProducts() {
             try {
                 const response = await adminFetch(
-                    "http://localhost:5000/api/admin/products"
+                    "/api/admin/products"
                 );
 
                 const data = await response.json();
@@ -120,7 +122,7 @@ function Products() {
                     data.data.map(async function (product) {
 
                         const variantResponse = await adminFetch(
-                            `http://localhost:5000/api/admin/products/${product._id}/variants`
+                            `/api/admin/products/${product._id}/variants`
                         );
 
                         const variantData = await variantResponse.json();
@@ -156,7 +158,7 @@ function Products() {
         async function getCategories() {
             try {
                 const response = await adminFetch(
-                    "http://localhost:5000/api/admin/categories"
+                    "/api/admin/categories"
                 );
 
                 const data = await response.json();
@@ -448,7 +450,7 @@ function Products() {
 
                                                         {product.images && product.images.length > 0 ? (
                                                             <img
-                                                                src={`http://localhost:5000${product.images[0]}`}
+                                                                src={`${API_BASE_URL}${product.images[0]}`}
                                                                 alt={product.name}
                                                                 className="h-full w-full object-cover"
                                                             />

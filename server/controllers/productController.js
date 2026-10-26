@@ -11,14 +11,14 @@ async function getProducts(req, res) {
     try {
         const products = await getAllProducts();
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Products fetched successfully",
             data: products
         });
     } catch (error) {
-        console.error(error);
+        console.error("[AquaCart] Failed to fetch products:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to fetch products"
         });
     }
@@ -26,13 +26,7 @@ async function getProducts(req, res) {
 
 async function createProductController(req, res) {
     try {
-        const {
-            name,
-            description,
-            category,
-            brand,
-            status
-        } = req.body;
+        const { name, description, category, brand, status } = req.body;
 
         if (!name || !name.trim()) {
             return res.status(400).json({
@@ -52,10 +46,8 @@ async function createProductController(req, res) {
             });
         }
 
-        // req.files contains every image uploaded through upload.array().
-        const images = (req.files || []).map(function (file) {
-            return `/uploads/${file.filename}`;
-        });
+        // Cloudinary's secure HTTPS URLs are provided by Multer as file.path.
+        const images = (req.files || []).map((file) => file.path);
 
         const product = await createProduct({
             name,
@@ -66,14 +58,14 @@ async function createProductController(req, res) {
             status
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             message: "Product created successfully",
             data: product
         });
     } catch (error) {
-        console.error(error);
+        console.error("[AquaCart] Failed to create product:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to create product"
         });
     }
@@ -87,17 +79,12 @@ async function updateProductController(req, res) {
             category: req.body.category
         };
 
-        // The existing edit form still uploads one "image" file.
+        // Preserve the existing edit form's single-image field.
         if (req.file) {
-            productData.images = [
-                `/uploads/${req.file.filename}`
-            ];
+            productData.images = [req.file.path];
         }
 
-        const product = await updateProduct(
-            req.params.id,
-            productData
-        );
+        const product = await updateProduct(req.params.id, productData);
 
         if (!product) {
             return res.status(404).json({
@@ -105,14 +92,14 @@ async function updateProductController(req, res) {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Product updated successfully",
             data: product
         });
     } catch (error) {
-        console.error(error);
+        console.error("[AquaCart] Failed to update product:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to update product",
             error: error.message
         });
@@ -122,7 +109,6 @@ async function updateProductController(req, res) {
 async function deleteProductController(req, res) {
     try {
         const { id } = req.params;
-
         const product = await deleteProduct(id);
 
         if (!product) {
@@ -131,14 +117,14 @@ async function deleteProductController(req, res) {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Product deleted successfully",
             data: product
         });
     } catch (error) {
-        console.error(error);
+        console.error("[AquaCart] Failed to delete product:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to delete product"
         });
     }
@@ -147,7 +133,6 @@ async function deleteProductController(req, res) {
 async function getProductByIdController(req, res) {
     try {
         const { id } = req.params;
-
         const product = await getProductById(id);
 
         if (!product) {
@@ -156,14 +141,14 @@ async function getProductByIdController(req, res) {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Product fetched successfully",
             data: product
         });
     } catch (error) {
-        console.error(error);
+        console.error("[AquaCart] Failed to fetch product:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to fetch product"
         });
     }

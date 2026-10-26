@@ -6,6 +6,10 @@ import Footer from "../../components/common/Footer";
 
 import "../../styles/Cart.css";
 
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
 function Cart() {
     const [cart, setCart] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -30,7 +34,7 @@ function Cart() {
                 }
 
                 const response = await fetch(
-                    "http://localhost:5000/api/cart",
+                    `${API_BASE_URL}/api/cart`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -62,7 +66,7 @@ function Cart() {
             setUpdatingItem(variantId);
 
             const response = await fetch(
-                "http://localhost:5000/api/cart",
+                `${API_BASE_URL}/api/cart`,
                 {
                     method: "PUT",
                     headers: {
@@ -97,7 +101,7 @@ function Cart() {
             setUpdatingItem(variantId);
 
             const response = await fetch(
-                `http://localhost:5000/api/cart/${variantId}`,
+                `${API_BASE_URL}/api/cart/${variantId}`,
                 {
                     method: "DELETE",
                     headers: {
@@ -181,7 +185,7 @@ function Cart() {
                                             <img
                                                 src={
                                                     item.product.images?.[0]
-                                                        ? `http://localhost:5000${item.product.images[0]}`
+                                                        ? `${API_BASE_URL}${item.product.images[0].startsWith("/") ? "" : "/"}${item.product.images[0]}`
                                                         : "/images/1.png"
                                                 }
                                                 alt={item.product.name}

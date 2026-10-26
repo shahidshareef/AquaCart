@@ -31,7 +31,7 @@ function EditProduct() {
             try {
 
                 const productResponse = await adminFetch(
-                    `http://localhost:5000/api/admin/products/${id}`
+                    `/api/admin/products/${id}`
                 );
 
                 const productData = await productResponse.json();
@@ -50,7 +50,7 @@ function EditProduct() {
 
 
                 const variantResponse = await adminFetch(
-                    `http://localhost:5000/api/admin/products/${id}/variants`
+                    `/api/admin/products/${id}/variants`
                 );
 
                 const variantData = await variantResponse.json();
@@ -65,7 +65,7 @@ function EditProduct() {
 
 
                 const categoryResponse = await adminFetch(
-                    "http://localhost:5000/api/admin/categories"
+                    "/api/admin/categories"
                 );
 
                 const categoryData = await categoryResponse.json();
@@ -151,7 +151,7 @@ function EditProduct() {
             // Update Product
 
             const productResponse = await adminFetch(
-                `http://localhost:5000/api/admin/products/${id}`,
+                `/api/admin/products/${id}`,
                 {
                     method: "PUT",
                     body: productFormData
@@ -172,7 +172,7 @@ function EditProduct() {
             for (const variant of variants) {
 
                 const variantResponse = await adminFetch(
-                    `http://localhost:5000/api/admin/products/variants/${variant._id}`,
+                    `/api/admin/products/variants/${variant._id}`,
                     {
                         method: "PUT",
                         headers: {
@@ -414,7 +414,7 @@ function EditProduct() {
                                     </p>
 
                                     <img
-                                        src={`http://localhost:5000${product.images[0]}`}
+                                        src={`${API_BASE_URL}${product.images[0]}`}
                                         alt={product.name}
                                         className="h-48 w-48 rounded-xl border border-slate-200 object-cover"
                                     />

@@ -19,7 +19,7 @@ function Inventory() {
         async function getInventory() {
             try {
                 const response = await adminFetch(
-                    "http://localhost:5000/api/admin/inventory"
+                    "/api/admin/inventory"
                 );
 
                 const data = await response.json();
@@ -97,7 +97,7 @@ function Inventory() {
 
         try {
             const response = await adminFetch(
-                `http://localhost:5000/api/admin/inventory/${variantId}/stock`,
+                `/api/admin/inventory/${variantId}/stock`,
                 {
                     method: "PUT",
                     headers: {

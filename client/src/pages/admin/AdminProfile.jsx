@@ -37,7 +37,7 @@ function AdminProfile() {
             setLoading(true);
 
             const response = await adminFetch(
-                "http://localhost:5000/api/admin/profile"
+                "/api/admin/profile"
             );
 
             const result = await response.json();
@@ -128,7 +128,7 @@ function AdminProfile() {
             setMessageType("");
 
             const response = await adminFetch(
-                "http://localhost:5000/api/admin/profile",
+                "/api/admin/profile",
                 {
                     method: "PUT",
                     headers: {
@@ -212,7 +212,7 @@ function AdminProfile() {
             setChangingPassword(true);
 
             const response = await adminFetch(
-                "http://localhost:5000/api/admin/profile/password",
+                "/api/admin/profile/password",
                 {
                     method: "PUT",
                     headers: {

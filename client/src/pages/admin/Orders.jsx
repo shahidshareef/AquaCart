@@ -41,8 +41,8 @@ function Orders() {
         setLoading(true);
 
         try {
-            const response = await fetch(
-                "http://localhost:5000/api/admin/orders",
+            const response = await adminFetch(
+                "/api/admin/orders",
                 {
                     headers: getAuthHeaders(),
                 }
@@ -75,8 +75,8 @@ function Orders() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${orderId}`,
+            const response = await adminFetch(
+                `/api/admin/orders/${orderId}`,
                 {
                     headers: getAuthHeaders(),
                 }
@@ -126,8 +126,8 @@ function Orders() {
             setMessage("");
             setMessageType("");
 
-            const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/status`,
+            const response = await adminFetch(
+                `/api/admin/orders/${selectedOrder._id}/status`,
                 {
                     method: "PUT",
                     headers: {
@@ -197,8 +197,8 @@ function Orders() {
         setMessageType("");
 
         try {
-            const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/return-request`,
+            const response = await adminFetch(
+                `/api/admin/orders/${selectedOrder._id}/return-request`,
                 {
                     method: "PATCH",
                     headers: {

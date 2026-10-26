@@ -39,7 +39,7 @@ function Categories() {
             setError("");
 
             const response = await adminFetch(
-                "http://localhost:5000/api/admin/categories"
+                "/api/admin/categories"
             );
 
             const result = await response.json();
@@ -54,7 +54,7 @@ function Categories() {
 
             try {
                 const productResponse = await adminFetch(
-                    "http://localhost:5000/api/admin/products"
+                    "/api/admin/products"
                 );
 
                 const productResult = await productResponse.json();
@@ -149,7 +149,7 @@ function Categories() {
             });
 
             const response = await adminFetch(
-                "http://localhost:5000/api/admin/categories",
+                "/api/admin/categories",
                 {
                     method: "POST",
                     headers: {
@@ -233,7 +233,7 @@ function Categories() {
             }
 
             const response = await adminFetch(
-                `http://localhost:5000/api/admin/categories/${categoryToEdit._id}`,
+                `/api/admin/categories/${categoryToEdit._id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -299,7 +299,7 @@ function Categories() {
             setDeleteError("");
 
             const response = await adminFetch(
-                `http://localhost:5000/api/admin/categories/${categoryToDelete._id}`,
+                `/api/admin/categories/${categoryToDelete._id}`,
                 {
                     method: "DELETE"
                 }

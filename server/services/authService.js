@@ -1,4 +1,3 @@
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const PasswordResetToken = require("../models/PasswordResetToken");
@@ -144,6 +143,17 @@ const adminLogin = async (email, password) => {
         throw new Error("Invalid email or password");
     }
 
+    // Verified admins can log in directly after password validation.
+    if (user.isEmailVerified === true) {
+        user.adminOtp = undefined;
+        user.adminOtpExpiresAt = undefined;
+
+        await user.save();
+
+        return user;
+    }
+
+    // Unverified admins must verify an OTP sent to their email.
     const otp = generateAdminOtp();
 
     user.adminOtp = otp;

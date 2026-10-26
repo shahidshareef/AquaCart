@@ -39,14 +39,33 @@ function AdminLogin() {
                 response.data
             );
 
-            setMessage(response.data.message);
+            // Verified admin accounts receive a token immediately and can
+            // enter the dashboard without OTP. Unverified accounts must verify
+            // the OTP sent by the backend.
+            const { token, admin } = response.data;
+
+            if (token) {
+                localStorage.setItem("token", token);
+
+                if (admin) {
+                    localStorage.setItem("admin", JSON.stringify(admin));
+                }
+
+                setMessage(response.data.message || "Admin login successful.");
+                setMessageType("success");
+
+                setTimeout(() => {
+                    navigate("/admin/dashboard", { replace: true });
+                }, 500);
+                return;
+            }
+
+            setMessage(response.data.message || "Please check your email for the OTP.");
             setMessageType("success");
 
             setTimeout(() => {
                 navigate("/admin/verify-otp", {
-                    state: {
-                        email: email
-                    }
+                    state: { email: email.trim().toLowerCase() }
                 });
             }, 500);
 

@@ -32,7 +32,7 @@ function Coupons() {
         async function getCoupons() {
             try {
                 const response = await adminFetch(
-                    "http://localhost:5000/api/admin/coupons"
+                    "/api/admin/coupons"
                 );
 
                 const data = await response.json();
@@ -210,7 +210,7 @@ function Coupons() {
             if (editingCouponId) {
 
                 response = await adminFetch(
-                    `http://localhost:5000/api/admin/coupons/${editingCouponId}`,
+                    `/api/admin/coupons/${editingCouponId}`,
                     {
                         method: "PUT",
                         headers: {
@@ -223,7 +223,7 @@ function Coupons() {
             } else {
 
                 response = await adminFetch(
-                    "http://localhost:5000/api/admin/coupons",
+                    "/api/admin/coupons",
                     {
                         method: "POST",
                         headers: {
@@ -323,7 +323,7 @@ function Coupons() {
         try {
 
             const response = await adminFetch(
-                `http://localhost:5000/api/admin/coupons/${deleteCouponId}`,
+                `/api/admin/coupons/${deleteCouponId}`,
                 {
                     method: "DELETE"
                 }

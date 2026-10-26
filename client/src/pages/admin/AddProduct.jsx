@@ -49,7 +49,7 @@ function AddProduct() {
         async function getCategories() {
             try {
                 const response = await adminFetch(
-                    "http://localhost:5000/api/admin/categories"
+                    "/api/admin/categories"
                 );
 
                 const data = await response.json();
@@ -286,7 +286,7 @@ function AddProduct() {
             });
 
             const productResponse = await adminFetch(
-                "http://localhost:5000/api/admin/products",
+                "/api/admin/products",
                 {
                     method: "POST",
                     body: formData
@@ -307,7 +307,7 @@ function AddProduct() {
 
             for (const variant of variants) {
                 const variantResponse = await adminFetch(
-                    `http://localhost:5000/api/admin/products/${productId}/variants`,
+                    `/api/admin/products/${productId}/variants`,
                     {
                         method: "POST",
                         headers: {
