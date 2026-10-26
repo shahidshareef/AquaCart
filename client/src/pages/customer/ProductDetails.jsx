@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import "../../styles/ProductDetails.css";
@@ -6,7 +5,10 @@ import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 
 const API_URL = (
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
+    import.meta.env.VITE_API_BASE_URL ||
+    (import.meta.env.PROD
+        ? "https://aquacart.onrender.com"
+        : "http://localhost:5000")
 ).replace(/\/+$/, "");
 
 const MAX_REVIEW_PHOTOS = 3;
@@ -165,9 +167,6 @@ function ProductDetails() {
         };
     }, [id]);
 
-    // Orders open this page with state={ openReview: true }.
-    // Open the review modal once the product and eligibility are loaded.
-    // Direct visits do not automatically show the review form.
     useEffect(() => {
         if (
             location.state?.openReview &&
@@ -418,7 +417,6 @@ function ProductDetails() {
             setReviewTitle("");
             setReviewComment("");
             setReviewRating(0);
-
             setReviewPhotos([]);
 
             setReviewEligibility({
@@ -453,13 +451,10 @@ function ProductDetails() {
     function getPhotoUrl(photoPath) {
         if (!photoPath) return "";
 
-        // Preserve complete URLs, including images hosted on another domain.
         if (/^https?:\/\//i.test(photoPath)) {
             return photoPath;
         }
 
-        // Convert relative paths such as "uploads/photo.jpg" to
-        // "/uploads/photo.jpg" before adding the backend URL.
         const normalizedPath = photoPath.startsWith("/")
             ? photoPath
             : `/${photoPath}`;
@@ -549,9 +544,7 @@ function ProductDetails() {
                                                 ? "product-thumbnail active"
                                                 : "product-thumbnail"
                                         }
-                                        onClick={() =>
-                                            setSelectedImage(image)
-                                        }
+                                        onClick={() => setSelectedImage(image)}
                                     >
                                         <img
                                             src={getPhotoUrl(image)}
@@ -571,9 +564,7 @@ function ProductDetails() {
                             aria-label={`${ratingSummary.average.toFixed(1)} out of 5 stars from ${ratingSummary.count} reviews`}
                         >
                             <span className="product-details-rating-stars">
-                                {"★".repeat(
-                                    Math.round(ratingSummary.average)
-                                )}
+                                {"★".repeat(Math.round(ratingSummary.average))}
                                 {"☆".repeat(
                                     5 - Math.round(ratingSummary.average)
                                 )}
@@ -701,9 +692,7 @@ function ProductDetails() {
                             </strong>
 
                             <span className="product-details-rating-stars">
-                                {"★".repeat(
-                                    Math.round(ratingSummary.average)
-                                )}
+                                {"★".repeat(Math.round(ratingSummary.average))}
                                 {"☆".repeat(
                                     5 - Math.round(ratingSummary.average)
                                 )}
@@ -765,8 +754,7 @@ function ProductDetails() {
                                     <div className="product-review-header">
                                         <div>
                                             <h3>
-                                                {review.user?.name ||
-                                                    "Customer"}
+                                                {review.user?.name || "Customer"}
                                             </h3>
                                             <span className="product-review-date">
                                                 {formatReviewDate(
@@ -783,8 +771,7 @@ function ProductDetails() {
                                                 Number(review.rating) || 0
                                             )}
                                             {"☆".repeat(
-                                                5 -
-                                                    (Number(review.rating) || 0)
+                                                5 - (Number(review.rating) || 0)
                                             )}
                                         </div>
                                     </div>
@@ -812,17 +799,13 @@ function ProductDetails() {
                                                             key={`${photo}-${index}`}
                                                             onClick={() =>
                                                                 setSelectedReviewImage(
-                                                                    getPhotoUrl(
-                                                                        photo
-                                                                    )
+                                                                    getPhotoUrl(photo)
                                                                 )
                                                             }
                                                             aria-label={`Open review photo ${index + 1}`}
                                                         >
                                                             <img
-                                                                src={getPhotoUrl(
-                                                                    photo
-                                                                )}
+                                                                src={getPhotoUrl(photo)}
                                                                 alt={`Customer review ${index + 1}`}
                                                                 loading="lazy"
                                                             />
@@ -876,8 +859,7 @@ function ProductDetails() {
                     ) : (
                         <div className="related-products-grid">
                             {relatedProducts.map((relatedProduct) => {
-                                const firstVariant =
-                                    relatedProduct.variants?.[0];
+                                const firstVariant = relatedProduct.variants?.[0];
 
                                 return (
                                     <div
@@ -887,11 +869,9 @@ function ProductDetails() {
                                         <div className="related-product-image">
                                             <img
                                                 src={
-                                                    relatedProduct.images
-                                                        ?.length > 0
+                                                    relatedProduct.images?.length > 0
                                                         ? getPhotoUrl(
-                                                              relatedProduct
-                                                                  .images[0]
+                                                              relatedProduct.images[0]
                                                           )
                                                         : "/images/1.png"
                                                 }
@@ -955,12 +935,8 @@ function ProductDetails() {
                     >
                         <div className="review-modal-header">
                             <div>
-                                <h2 id="write-review-heading">
-                                    Write a Review
-                                </h2>
-                                <p>
-                                    Share your experience with {product.name}
-                                </p>
+                                <h2 id="write-review-heading">Write a Review</h2>
+                                <p>Share your experience with {product.name}</p>
                             </div>
 
                             <button
@@ -977,10 +953,7 @@ function ProductDetails() {
                         <form onSubmit={handleSubmitReview}>
                             <div className="review-modal-body">
                                 {reviewSuccess && (
-                                    <div
-                                        className="review-form-success"
-                                        role="status"
-                                    >
+                                    <div className="review-form-success" role="status">
                                         {reviewSuccess}
                                     </div>
                                 )}
@@ -990,59 +963,40 @@ function ProductDetails() {
                                         <div className="review-form-field">
                                             <label>
                                                 Overall rating{" "}
-                                                <span className="review-required">
-                                                    *
-                                                </span>
+                                                <span className="review-required">*</span>
                                             </label>
 
                                             <div
                                                 className="review-star-picker"
-                                                onMouseLeave={() =>
-                                                    setHoveredRating(0)
-                                                }
+                                                onMouseLeave={() => setHoveredRating(0)}
                                             >
-                                                {[1, 2, 3, 4, 5].map(
-                                                    (star) => (
-                                                        <button
-                                                            type="button"
-                                                            key={star}
-                                                            className={
-                                                                (hoveredRating ||
-                                                                    reviewRating) >=
-                                                                star
-                                                                    ? "selected"
-                                                                    : ""
-                                                            }
-                                                            onMouseEnter={() =>
-                                                                setHoveredRating(
-                                                                    star
-                                                                )
-                                                            }
-                                                            onFocus={() =>
-                                                                setHoveredRating(
-                                                                    star
-                                                                )
-                                                            }
-                                                            onBlur={() =>
-                                                                setHoveredRating(
-                                                                    0
-                                                                )
-                                                            }
-                                                            onClick={() =>
-                                                                setReviewRating(
-                                                                    star
-                                                                )
-                                                            }
-                                                            aria-label={`${star} star${star > 1 ? "s" : ""}`}
-                                                            aria-pressed={
-                                                                reviewRating ===
-                                                                star
-                                                            }
-                                                        >
-                                                            ★
-                                                        </button>
-                                                    )
-                                                )}
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        type="button"
+                                                        key={star}
+                                                        className={
+                                                            (hoveredRating || reviewRating) >= star
+                                                                ? "selected"
+                                                                : ""
+                                                        }
+                                                        onMouseEnter={() =>
+                                                            setHoveredRating(star)
+                                                        }
+                                                        onFocus={() =>
+                                                            setHoveredRating(star)
+                                                        }
+                                                        onBlur={() =>
+                                                            setHoveredRating(0)
+                                                        }
+                                                        onClick={() =>
+                                                            setReviewRating(star)
+                                                        }
+                                                        aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                                                        aria-pressed={reviewRating === star}
+                                                    >
+                                                        ★
+                                                    </button>
+                                                ))}
 
                                                 <span>
                                                     {reviewRating
@@ -1062,9 +1016,7 @@ function ProductDetails() {
                                         <div className="review-form-field">
                                             <label htmlFor="review-title">
                                                 Review title{" "}
-                                                <span className="review-required">
-                                                    *
-                                                </span>
+                                                <span className="review-required">*</span>
                                             </label>
 
                                             <input
@@ -1072,35 +1024,27 @@ function ProductDetails() {
                                                 type="text"
                                                 value={reviewTitle}
                                                 onChange={(event) =>
-                                                    setReviewTitle(
-                                                        event.target.value
-                                                    )
+                                                    setReviewTitle(event.target.value)
                                                 }
                                                 maxLength={120}
                                                 placeholder="Summarize your experience"
                                                 required
                                             />
 
-                                            <small>
-                                                {reviewTitle.length}/120
-                                            </small>
+                                            <small>{reviewTitle.length}/120</small>
                                         </div>
 
                                         <div className="review-form-field">
                                             <label htmlFor="review-comment">
                                                 Your review{" "}
-                                                <span className="review-required">
-                                                    *
-                                                </span>
+                                                <span className="review-required">*</span>
                                             </label>
 
                                             <textarea
                                                 id="review-comment"
                                                 value={reviewComment}
                                                 onChange={(event) =>
-                                                    setReviewComment(
-                                                        event.target.value
-                                                    )
+                                                    setReviewComment(event.target.value)
                                                 }
                                                 maxLength={2000}
                                                 rows={5}
@@ -1108,9 +1052,7 @@ function ProductDetails() {
                                                 required
                                             />
 
-                                            <small>
-                                                {reviewComment.length}/2000
-                                            </small>
+                                            <small>{reviewComment.length}/2000</small>
                                         </div>
 
                                         <div className="review-form-field">
@@ -1129,8 +1071,7 @@ function ProductDetails() {
                                                 multiple
                                                 onChange={handlePhotoSelection}
                                                 disabled={
-                                                    reviewPhotos.length >=
-                                                    MAX_REVIEW_PHOTOS
+                                                    reviewPhotos.length >= MAX_REVIEW_PHOTOS
                                                 }
                                             />
 
@@ -1141,60 +1082,47 @@ function ProductDetails() {
                                                     photoInputRef.current?.click()
                                                 }
                                                 disabled={
-                                                    reviewPhotos.length >=
-                                                    MAX_REVIEW_PHOTOS
+                                                    reviewPhotos.length >= MAX_REVIEW_PHOTOS
                                                 }
                                             >
                                                 ＋ Add Photos
                                             </button>
 
                                             <small>
-                                                JPG, PNG or WEBP · Maximum 5 MB
-                                                each
+                                                JPG, PNG or WEBP · Maximum 5 MB each
                                             </small>
 
                                             {reviewPhotos.length > 0 && (
                                                 <div className="review-photo-preview-list">
-                                                    {reviewPhotos.map(
-                                                        (photo, index) => (
-                                                            <div
-                                                                className="review-photo-preview"
-                                                                key={`${photo.name}-${photo.lastModified}-${index}`}
+                                                    {reviewPhotos.map((photo, index) => (
+                                                        <div
+                                                            className="review-photo-preview"
+                                                            key={`${photo.name}-${photo.lastModified}-${index}`}
+                                                        >
+                                                            <img
+                                                                src={URL.createObjectURL(photo)}
+                                                                alt={`Selected upload ${index + 1}`}
+                                                            />
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeReviewPhoto(index)
+                                                                }
+                                                                aria-label={`Remove photo ${index + 1}`}
                                                             >
-                                                                <img
-                                                                    src={URL.createObjectURL(
-                                                                        photo
-                                                                    )}
-                                                                    alt={`Selected upload ${index + 1}`}
-                                                                />
+                                                                ×
+                                                            </button>
 
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        removeReviewPhoto(
-                                                                            index
-                                                                        )
-                                                                    }
-                                                                    aria-label={`Remove photo ${index + 1}`}
-                                                                >
-                                                                    ×
-                                                                </button>
-
-                                                                <span>
-                                                                    {photo.name}
-                                                                </span>
-                                                            </div>
-                                                        )
-                                                    )}
+                                                            <span>{photo.name}</span>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
 
                                         {reviewError && (
-                                            <p
-                                                className="review-form-error"
-                                                role="alert"
-                                            >
+                                            <p className="review-form-error" role="alert">
                                                 {reviewError}
                                             </p>
                                         )}
@@ -1206,9 +1134,7 @@ function ProductDetails() {
                                 <button
                                     type="button"
                                     className="review-secondary-button"
-                                    onClick={() =>
-                                        setShowReviewModal(false)
-                                    }
+                                    onClick={() => setShowReviewModal(false)}
                                     disabled={reviewSubmitting}
                                 >
                                     {reviewSuccess ? "Close" : "Cancel"}
