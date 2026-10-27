@@ -1,77 +1,191 @@
-const clientUrl = process.env.CLIENT_URL
+
+const { google } = require("googleapis");
+const fs = require("fs");
+const path = require("path");
+
+const CLIENT_URL = process.env.CLIENT_URL
     ? process.env.CLIENT_URL.replace(/\/+$/, "")
     : "";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const mailFrom = process.env.MAIL_FROM || "onboarding@resend.dev";
+const GMAIL_FROM = process.env.GMAIL_FROM;
 
-if (!clientUrl) {
-    console.warn(
-        "Email service warning: CLIENT_URL is missing from the server environment."
-    );
-}
+const CREDENTIALS_PATH = path.join(__dirname, "..", "credentials.json");
+const TOKEN_PATH = path.join(__dirname, "..", "token.json");
 
-if (!resendApiKey) {
-    console.warn(
-        "Email service warning: RESEND_API_KEY is missing from the server environment."
-    );
-}
+let gmailClientPromise;
 
-const escapeHtml = (value = "") => {
-    return String(value)
+const escapeHtml = (value = "") =>
+    String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-};
 
-const sendEmail = async ({ to, subject, text, html }) => {
-    if (!resendApiKey) {
+const readJsonConfig = (envName, filePath, description) => {
+    let raw;
+
+    if (process.env[envName]) {
+        try {
+            raw = Buffer.from(process.env[envName], "base64").toString("utf8");
+        } catch {
+            throw new Error(`${envName} is not valid Base64.`);
+        }
+    } else if (fs.existsSync(filePath)) {
+        raw = fs.readFileSync(filePath, "utf8");
+    } else {
         throw new Error(
-            "Email service is not configured. Please add RESEND_API_KEY to the server environment."
+            `${description} is missing. Configure ${envName} in the environment or provide ${path.basename(filePath)} locally.`
         );
     }
 
     try {
-        const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${resendApiKey}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                from: mailFrom,
-                to: [to],
-                subject,
-                text,
-                html,
-            }),
+        return JSON.parse(raw);
+    } catch {
+        throw new Error(
+            `${description} could not be parsed. Check the ${envName} value or local JSON file.`
+        );
+    }
+};
+
+const getGmailClient = async () => {
+    if (!gmailClientPromise) {
+        gmailClientPromise = (async () => {
+            if (!GMAIL_FROM) {
+                throw new Error(
+                    "GMAIL_FROM is missing from the server environment."
+                );
+            }
+
+            const credentialData = readJsonConfig(
+                "GMAIL_CREDENTIALS_BASE64",
+                CREDENTIALS_PATH,
+                "Google OAuth credentials"
+            );
+
+            const credentials = credentialData.installed || credentialData.web;
+
+            if (
+                !credentials?.client_id ||
+                !credentials?.client_secret ||
+                !credentials?.redirect_uris?.[0]
+            ) {
+                throw new Error(
+                    "Invalid Google OAuth credentials configuration."
+                );
+            }
+
+            const token = readJsonConfig(
+                "GMAIL_TOKEN_BASE64",
+                TOKEN_PATH,
+                "Google OAuth token"
+            );
+
+            if (!token.refresh_token) {
+                throw new Error(
+                    "Google OAuth token is missing its refresh token. Re-authorize Gmail locally."
+                );
+            }
+
+            const auth = new google.auth.OAuth2(
+                credentials.client_id,
+                credentials.client_secret,
+                credentials.redirect_uris[0]
+            );
+
+            auth.setCredentials(token);
+
+            // Refresh/check authorization without reading Gmail profile data.
+            await auth.getAccessToken();
+
+            return google.gmail({
+                version: "v1",
+                auth,
+            });
+        })().catch((error) => {
+            gmailClientPromise = undefined;
+            throw error;
+        });
+    }
+
+    return gmailClientPromise;
+};
+
+const encodeMimeHeader = (value = "") =>
+    `=?UTF-8?B?${Buffer.from(String(value), "utf8").toString("base64")}?=`;
+
+const createRawMessage = ({ to, subject, text, html }) => {
+    const safeTo = String(to).replace(/[\r\n]/g, "");
+    const safeFrom = String(GMAIL_FROM).replace(/[\r\n]/g, "");
+    const safeSubject = encodeMimeHeader(subject);
+
+    const boundary = `aquacart_${Date.now()}_${Math.random()
+        .toString(16)
+        .slice(2)}`;
+
+    const textBase64 = Buffer.from(text || "", "utf8").toString("base64");
+    const htmlBase64 = Buffer.from(html || "", "utf8").toString("base64");
+
+    const mimeMessage = [
+        `From: ${safeFrom}`,
+        `To: ${safeTo}`,
+        `Subject: ${safeSubject}`,
+        "MIME-Version: 1.0",
+        `Content-Type: multipart/alternative; boundary="${boundary}"`,
+        "",
+        `--${boundary}`,
+        'Content-Type: text/plain; charset="UTF-8"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        textBase64,
+        `--${boundary}`,
+        'Content-Type: text/html; charset="UTF-8"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        htmlBase64,
+        `--${boundary}--`,
+        "",
+    ].join("\r\n");
+
+    return Buffer.from(mimeMessage, "utf8")
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+};
+
+const sendEmail = async ({ to, subject, text, html }) => {
+    if (!to) {
+        throw new Error("Cannot send email: recipient address is missing.");
+    }
+
+    try {
+        const gmail = await getGmailClient();
+
+        const raw = createRawMessage({
+            to,
+            subject,
+            text,
+            html,
         });
 
-        const result = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            const errorMessage =
-                result.message ||
-                result.error ||
-                `Resend API request failed with status ${response.status}`;
-
-            console.error("Resend email failed:", errorMessage);
-            throw new Error(errorMessage);
-        }
+        const response = await gmail.users.messages.send({
+            userId: "me",
+            requestBody: { raw },
+        });
 
         console.log(
-            `Email accepted by Resend for ${to}. Email ID: ${result.id}`
+            `Email accepted by Gmail for ${to}. Message ID: ${response.data.id}`
         );
 
-        return {
-            messageId: result.id,
-            ...result,
-        };
+        return { messageId: response.data.id };
     } catch (error) {
-        console.error("Email sending failed:", error.message);
-        throw new Error(`Unable to send email. ${error.message}`);
+        const apiMessage =
+            error.response?.data?.error?.message || error.message;
+
+        console.error("Gmail API email failed:", apiMessage);
+
+        throw new Error(`Unable to send email. ${apiMessage}`);
     }
 };
 
@@ -124,12 +238,7 @@ AquaCart Team
 </html>
 `;
 
-    return sendEmail({
-        to: user.email,
-        subject,
-        text,
-        html,
-    });
+    return sendEmail({ to: user.email, subject, text, html });
 };
 
 const sendAdminOtp = async (user) => {
@@ -179,16 +288,11 @@ AquaCart Team
 </html>
 `;
 
-    return sendEmail({
-        to: user.email,
-        subject,
-        text,
-        html,
-    });
+    return sendEmail({ to: user.email, subject, text, html });
 };
 
 const sendPasswordResetEmail = async (user, resetToken) => {
-    if (!clientUrl) {
+    if (!CLIENT_URL) {
         throw new Error(
             "Password reset email cannot be sent because CLIENT_URL is missing from the server environment."
         );
@@ -202,7 +306,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
         : "/set-new-password";
 
     const resetUrl =
-        `${clientUrl}${resetPath}?token=${encodeURIComponent(resetToken)}`;
+        `${CLIENT_URL}${resetPath}?token=${encodeURIComponent(resetToken)}`;
 
     const subject = "Reset your AquaCart password";
 
@@ -248,12 +352,7 @@ AquaCart Team
 </html>
 `;
 
-    return sendEmail({
-        to: user.email,
-        subject,
-        text,
-        html,
-    });
+    return sendEmail({ to: user.email, subject, text, html });
 };
 
 module.exports = {
