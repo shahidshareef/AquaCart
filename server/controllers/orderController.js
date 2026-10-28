@@ -11,6 +11,7 @@ const {
   cancelCustomerOrder,
   requestOrderReturn,
   reviewOrderReturn,
+  completeOrderReturn,
 } = require("../services/orderCancellationService");
 
 // Get all orders (admin).
@@ -152,9 +153,9 @@ const cancelCustomerOrderController = async (req, res) => {
     );
 
     const message =
-      order.refundStatus === "pending"
-        ? "Order cancelled. Your refund is pending processing."
-        : "Order cancelled successfully";
+      order.refundStatus === "completed"
+        ? "Order cancelled successfully. Your refund has been credited to your AquaCart wallet."
+        : "Order cancelled successfully.";
 
     return res.status(200).json({ message, data: order });
   } catch (error) {
@@ -252,6 +253,40 @@ const reviewOrderReturnController = async (req, res) => {
   }
 };
 
+// Admin confirms receipt of the returned item and completes the return/refund.
+const completeOrderReturnController = async (req, res) => {
+  try {
+    const { adminNote } = req.body || {};
+    const order = await completeOrderReturn(
+      req.params.id,
+      adminNote === undefined ? "" : adminNote
+    );
+
+    return res.status(200).json({
+      message: order.refundStatus === "completed"
+        ? "Return completed and refund credited to the customer's AquaCart wallet."
+        : "Return completed successfully.",
+      data: order,
+    });
+  } catch (error) {
+    const knownErrors = [
+      "Invalid order ID",
+      "Order not found",
+      "Admin note must be text",
+      "Admin note cannot exceed 1000 characters",
+      "Only delivered orders can be completed as returned",
+      "Only approved return requests can be completed",
+      "Could not restore returned product stock. Return was not completed.",
+    ];
+
+    let statusCode = knownErrors.includes(error.message) ? 400 : 500;
+    if (error.message === "Order not found") statusCode = 404;
+
+    console.error("Complete return error:", error);
+    return res.status(statusCode).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getCustomerOrdersController,
@@ -261,4 +296,5 @@ module.exports = {
   cancelCustomerOrderController,
   requestOrderReturnController,
   reviewOrderReturnController,
+  completeOrderReturnController,
 };

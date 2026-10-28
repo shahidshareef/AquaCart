@@ -22,7 +22,9 @@ function Orders() {
     const [returnDecision, setReturnDecision] = useState("");
     const [returnNote, setReturnNote] = useState("");
     const [returnActionLoading, setReturnActionLoading] = useState(false);
+    const [returnCompleteLoading, setReturnCompleteLoading] = useState(false);
     const [showReturnConfirmModal, setShowReturnConfirmModal] = useState(false);
+    const [showCompleteReturnModal, setShowCompleteReturnModal] = useState(false);
 
     function getAuthHeaders() {
         const token = localStorage.getItem("token");
@@ -41,8 +43,8 @@ function Orders() {
         setLoading(true);
 
         try {
-            const response = await adminFetch(
-                "/api/admin/orders",
+            const response = await fetch(
+                "http://localhost:5000/api/admin/orders",
                 {
                     headers: getAuthHeaders(),
                 }
@@ -75,8 +77,8 @@ function Orders() {
             setMessage("");
             setMessageType("");
 
-            const response = await adminFetch(
-                `/api/admin/orders/${orderId}`,
+            const response = await fetch(
+                `http://localhost:5000/api/admin/orders/${orderId}`,
                 {
                     headers: getAuthHeaders(),
                 }
@@ -102,7 +104,7 @@ function Orders() {
     }
 
     function closeOrderModal() {
-        if (returnActionLoading) {
+        if (returnActionLoading || returnCompleteLoading) {
             return;
         }
 
@@ -126,8 +128,8 @@ function Orders() {
             setMessage("");
             setMessageType("");
 
-            const response = await adminFetch(
-                `/api/admin/orders/${selectedOrder._id}/status`,
+            const response = await fetch(
+                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/status`,
                 {
                     method: "PUT",
                     headers: {
@@ -197,8 +199,8 @@ function Orders() {
         setMessageType("");
 
         try {
-            const response = await adminFetch(
-                `/api/admin/orders/${selectedOrder._id}/return-request`,
+            const response = await fetch(
+                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/return-request`,
                 {
                     method: "PATCH",
                     headers: {
@@ -245,6 +247,77 @@ function Orders() {
             setMessageType("error");
         } finally {
             setReturnActionLoading(false);
+        }
+    }
+
+    function handleCompleteReturn() {
+        if (
+            !selectedOrder ||
+            !["approved", "completed"].includes(selectedOrder.returnRequest?.status)
+        ) {
+            return;
+        }
+
+        setShowCompleteReturnModal(true);
+    }
+
+    async function confirmCompleteReturn() {
+        if (
+            !selectedOrder ||
+            !["approved", "completed"].includes(selectedOrder.returnRequest?.status)
+        ) {
+            return;
+        }
+
+        setReturnCompleteLoading(true);
+        setMessage("");
+        setMessageType("");
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/return-complete`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...getAuthHeaders(),
+                    },
+                    body: JSON.stringify({ adminNote: returnNote }),
+                }
+            );
+
+            const result = await readResponse(response);
+
+            if (!response.ok) {
+                setShowCompleteReturnModal(false);
+                setMessage(result.message || "Failed to complete the return.");
+                setMessageType("error");
+                return;
+            }
+
+            setSelectedOrder(result.data);
+            setShowCompleteReturnModal(false);
+            setOrderStatus(result.data.orderStatus || "returned");
+            setReturnNote(result.data.returnRequest?.adminNote || "");
+            setOrders((currentOrders) =>
+                currentOrders.map((order) =>
+                    order._id === result.data._id ? result.data : order
+                )
+            );
+
+            setMessage(
+                result.data.paymentMethod === "razorpay" && result.data.refundStatus === "completed"
+                    ? "Return completed. The eligible refund has been credited to the customer's AquaCart wallet."
+                    : "Return completed successfully."
+            );
+            setMessageType("success");
+        } catch (error) {
+            console.error(error);
+            setShowCompleteReturnModal(false);
+            setMessage(error.message || "Something went wrong while completing the return.");
+            setMessageType("error");
+        } finally {
+            setReturnCompleteLoading(false);
         }
     }
 
@@ -985,8 +1058,37 @@ function Orders() {
                                         )}
 
                                         {returnStatus === "approved" && (
-                                            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                                                Return request approved. This approval does not automatically issue a refund or mark the return as completed.
+                                            <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                                                <p className="text-sm leading-6 text-green-800">
+                                                    Return approved. After the returned goods have been received and checked, complete the return below. For an eligible Razorpay-paid order, completion credits the refund to the customer's AquaCart wallet.
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCompleteReturn}
+                                                    disabled={returnCompleteLoading || returnActionLoading}
+                                                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {returnCompleteLoading ? "Completing return…" : "Confirm Goods Received & Complete Return"}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {returnStatus === "completed" && (
+                                            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                                                <p>
+                                                    Return completed. Refund status: {selectedOrder.refundStatus || "not applicable"}.
+                                                    {selectedOrder.refundStatus === "completed" && " Wallet credit is recorded as completed; use the recovery action below if the customer's wallet history still does not show it."}
+                                                </p>
+                                                {selectedOrder.paymentMethod === "razorpay" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCompleteReturn}
+                                                        disabled={returnCompleteLoading || returnActionLoading}
+                                                        className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        Verify / Repair Wallet Credit
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
 
@@ -1069,6 +1171,49 @@ function Orders() {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {showCompleteReturnModal && selectedOrder && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+                    onClick={() => !returnCompleteLoading && setShowCompleteReturnModal(false)}
+                    role="presentation"
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="complete-return-title"
+                        className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-5">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700" aria-hidden="true">✓</div>
+                            <div className="min-w-0 flex-1">
+                                <h2 id="complete-return-title" className="text-lg font-bold text-slate-900">{selectedOrder.returnRequest?.status === "completed" ? "Verify wallet refund?" : "Confirm returned goods received?"}</h2>
+                                <p className="mt-1 break-all text-sm text-slate-500">Order #{selectedOrder._id}</p>
+                            </div>
+                            <button type="button" onClick={() => setShowCompleteReturnModal(false)} disabled={returnCompleteLoading} aria-label="Close confirmation" className="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50">×</button>
+                        </div>
+                        <div className="space-y-4 px-6 py-5">
+                            <p className="text-sm leading-6 text-slate-600">{selectedOrder.returnRequest?.status === "completed" ? "This recovery check will verify the wallet ledger for this already-completed return and credit the eligible refund only if its unique refund transaction is missing. It will not restore stock again." : "Confirm only after the returned goods have been received and checked. Completing this return will restore the returned items to stock and credit an eligible Razorpay-paid refund to the customer’s AquaCart wallet."}</p>
+                            {selectedOrder.paymentMethod === "razorpay" && (
+                                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                                    <p className="text-sm font-semibold text-sky-900">Wallet refund</p>
+                                    <p className="mt-1 text-sm leading-5 text-sky-800">If this order was successfully paid and has not already been refunded to the wallet, the eligible refund will be credited once. The customer can see it in their profile wallet.</p>
+                                </div>
+                            )}
+                            {selectedOrder.returnRequest?.status !== "completed" && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"><strong>Important:</strong> This action updates the order and inventory. Do not continue until the returned goods are physically received.</div>
+                            )}
+                        </div>
+                        <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={() => setShowCompleteReturnModal(false)} disabled={returnCompleteLoading} className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">Not yet</button>
+                            <button type="button" onClick={confirmCompleteReturn} disabled={returnCompleteLoading} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                {returnCompleteLoading ? "Processing…" : selectedOrder.returnRequest?.status === "completed" ? "Verify / Repair Wallet Credit" : "Confirm & Complete Return"}
+                            </button>
+                        </div>
+                    </section>
                 </div>
             )}
 

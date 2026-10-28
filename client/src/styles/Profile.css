@@ -1286,3 +1286,97 @@
         flex-shrink: 0;
     }
 }
+
+
+/* ================================
+   AquaCart Wallet
+================================ */
+.profile-wallet-section {
+    display: grid;
+    gap: 22px;
+}
+.profile-wallet-card {
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 26px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #0f172a 0%, #075985 100%);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+.profile-wallet-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+.profile-wallet-eyebrow {
+    margin: 0 0 8px;
+    color: #bae6fd;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+}
+.profile-wallet-top h2 { margin: 0; color: #fff; font-size: 23px; }
+.profile-wallet-description {
+    max-width: 620px;
+    margin: 9px 0 0;
+    color: #dbeafe;
+    font-size: 13px;
+    line-height: 1.65;
+}
+.profile-wallet-icon {
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.12);
+    font-size: 27px;
+    font-weight: 800;
+}
+.profile-wallet-balance {
+    margin-top: 24px;
+    font-size: clamp(30px, 5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+.profile-wallet-currency { margin: 5px 0 0; color: #bae6fd; font-size: 12px; }
+.profile-wallet-error {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 14px; padding: 10px 12px; border-radius: 10px;
+    background: rgba(127, 29, 29, 0.35); color: #fee2e2; font-size: 13px;
+}
+.profile-wallet-error button { border: 1px solid rgba(255,255,255,0.4); border-radius: 7px; padding: 5px 9px; color: #fff; font-weight: 700; }
+.profile-wallet-transactions {
+    border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; background: #fff;
+}
+.profile-wallet-transactions-heading {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+}
+.profile-wallet-transactions-heading h3 { margin: 0; color: #0f172a; font-size: 17px; }
+.profile-wallet-empty { margin: 0; padding: 16px 0; color: #64748b; font-size: 14px; line-height: 1.6; }
+.profile-wallet-transaction-list { display: grid; }
+.profile-wallet-transaction {
+    display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid #f1f5f9;
+}
+.profile-wallet-transaction-icon {
+    display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center;
+    border-radius: 50%; background: #f1f5f9; color: #334155; font-size: 21px; font-weight: 700;
+}
+.profile-wallet-transaction-details { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.profile-wallet-transaction-details strong { overflow-wrap: anywhere; color: #0f172a; font-size: 13px; }
+.profile-wallet-transaction-details span { color: #64748b; font-size: 11px; }
+.profile-wallet-transaction-amount { display: grid; flex-shrink: 0; gap: 4px; text-align: right; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.profile-wallet-transaction-amount span { color: #64748b; font-size: 10px; font-weight: 500; }
+.profile-wallet-transaction-amount.is-credit { color: #15803d; }
+.profile-wallet-transaction-amount.is-debit { color: #b91c1c; }
+@media (max-width: 600px) {
+    .profile-wallet-card { padding: 20px; }
+    .profile-wallet-top h2 { font-size: 20px; }
+    .profile-wallet-transactions { padding: 15px; }
+    .profile-wallet-transaction { align-items: flex-start; gap: 9px; }
+    .profile-wallet-transaction-amount { font-size: 12px; }
+}

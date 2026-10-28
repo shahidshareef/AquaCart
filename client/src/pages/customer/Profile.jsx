@@ -28,6 +28,11 @@ function Profile() {
     const [addressError, setAddressError] = useState("");
 
     const [orders, setOrders] = useState([]);
+    const [wallet, setWallet] = useState(null);
+    const [walletTransactions, setWalletTransactions] = useState([]);
+    const [walletLoading, setWalletLoading] = useState(true);
+    const [walletError, setWalletError] = useState("");
+    const [showWallet, setShowWallet] = useState(false);
     const [orderLoading, setOrderLoading] = useState(false);
     const [orderError, setOrderError] = useState("");
     const [showOrders, setShowOrders] = useState(false);
@@ -97,6 +102,46 @@ function Profile() {
         navigate("/login", { replace: true });
     };
 
+    const loadWallet = async (tokenOverride = getToken()) => {
+        if (!tokenOverride) {
+            setWalletError("Please log in to view your wallet.");
+            setWalletLoading(false);
+            return;
+        }
+
+        setWalletLoading(true);
+        setWalletError("");
+
+        try {
+            const [walletResponse, transactionsResponse] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/wallet`, {
+                    headers: { Authorization: `Bearer ${tokenOverride}` },
+                }),
+                fetch(`${API_BASE_URL}/api/wallet/transactions?limit=5`, {
+                    headers: { Authorization: `Bearer ${tokenOverride}` },
+                }),
+            ]);
+
+            if (!walletResponse.ok) {
+                throw new Error(await getErrorMessage(walletResponse, "Unable to load wallet balance."));
+            }
+
+            if (!transactionsResponse.ok) {
+                throw new Error(await getErrorMessage(transactionsResponse, "Unable to load wallet transactions."));
+            }
+
+            const walletResult = await walletResponse.json();
+            const transactionsResult = await transactionsResponse.json();
+
+            setWallet(walletResult.data || null);
+            setWalletTransactions(transactionsResult.data?.transactions || []);
+        } catch (walletLoadError) {
+            setWalletError(walletLoadError.message || "Unable to load your wallet.");
+        } finally {
+            setWalletLoading(false);
+        }
+    };
+
     useEffect(() => {
         const fetchAddresses = async (token) => {
             try {
@@ -148,6 +193,7 @@ function Profile() {
             }
 
             fetchAddresses(token);
+            loadWallet(token);
 
             try {
                 const response = await fetch(
@@ -654,7 +700,7 @@ function Profile() {
             case "processing":
                 return `Refund of ${amount} is being processed.`;
             case "completed":
-                return `Refund of ${amount} has been completed.`;
+                return `Refund of ${amount} has been credited to your AquaCart wallet.`;
             case "failed":
                 return `Refund of ${amount} could not be completed yet. Please contact support.`;
             default:
@@ -738,6 +784,7 @@ function Profile() {
 
             const data = await response.json();
             updateOrderInState(data.data);
+            await loadWallet(token);
             setOrderActionLoading(false);
             closeOrderActionModal(true);
         } catch (error) {
@@ -963,6 +1010,97 @@ function Profile() {
                             Log Out
                         </button>
                     </div>
+
+                    {/* Wallet is collapsed by default; open it on demand. */}
+                    <section className="profile-section">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowWallet(true);
+                                loadWallet();
+                            }}
+                            className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-sky-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                            aria-haspopup="dialog"
+                            aria-expanded={showWallet}
+                        >
+                            <span className="flex min-w-0 items-center gap-4">
+                                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-xl font-bold text-sky-700" aria-hidden="true">₹</span>
+                                <span className="min-w-0">
+                                    <span className="block text-xs font-bold uppercase tracking-wider text-sky-700">AquaCart Wallet</span>
+                                    <span className="mt-1 block text-lg font-semibold text-slate-900">{walletLoading ? "Loading balance…" : wallet ? formatCurrency(wallet.balance) : "View wallet balance"}</span>
+                                    <span className="mt-1 block text-sm text-slate-500">View balance and transaction history</span>
+                                </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2 text-sm font-semibold text-sky-700">Open wallet <span aria-hidden="true">→</span></span>
+                        </button>
+                    </section>
+
+                    {showWallet && (
+                        <div
+                            className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+                            onClick={() => setShowWallet(false)}
+                        >
+                            <section
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="profile-wallet-title"
+                                className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-wider text-sky-700">AquaCart Wallet</p>
+                                        <h2 id="profile-wallet-title" className="mt-1 text-xl font-bold text-slate-900">Your wallet</h2>
+                                        <p className="mt-1 text-sm text-slate-500">Refund credits and wallet activity for your account.</p>
+                                    </div>
+                                    <button type="button" onClick={() => setShowWallet(false)} aria-label="Close wallet" className="rounded-lg px-3 py-1 text-2xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+                                </div>
+                                <div className="space-y-5 p-5 sm:p-6">
+                                    <div className="rounded-2xl bg-gradient-to-br from-sky-700 to-indigo-800 p-5 text-white">
+                                        <p className="text-sm font-medium text-sky-100">Available balance</p>
+                                        <p className="mt-2 text-3xl font-bold">{walletLoading ? "Loading…" : wallet ? formatCurrency(wallet.balance) : "—"}</p>
+                                        <p className="mt-2 text-xs text-sky-100">Currency: {wallet?.currency || "INR"}</p>
+                                    </div>
+                                    {walletError && (
+                                        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                                            <span>{walletError}</span>
+                                            <button type="button" onClick={() => loadWallet()} disabled={walletLoading} className="shrink-0 rounded-md border border-red-200 px-3 py-1.5 font-semibold hover:bg-red-100 disabled:opacity-50">Retry</button>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                            <h3 className="font-semibold text-slate-900">Recent activity</h3>
+                                            <button type="button" onClick={() => loadWallet()} disabled={walletLoading} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">{walletLoading ? "Refreshing…" : "Refresh"}</button>
+                                        </div>
+                                        {walletLoading && walletTransactions.length === 0 ? (
+                                            <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">Loading wallet activity…</p>
+                                        ) : walletTransactions.length === 0 ? (
+                                            <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No wallet transactions yet. Eligible refunds and wallet purchases will appear here.</p>
+                                        ) : (
+                                            <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">
+                                                {walletTransactions.map((transaction) => (
+                                                    <div className="flex items-center gap-3 p-3 sm:p-4" key={transaction._id}>
+                                                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg font-bold ${transaction.type === "credit" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{transaction.type === "credit" ? "+" : "−"}</span>
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="block break-words text-sm font-semibold text-slate-800">{transaction.description || (transaction.source === "refund" ? "Order refund" : transaction.source === "purchase" ? "Wallet purchase" : "Wallet adjustment")}</span>
+                                                            <span className="mt-1 block text-xs text-slate-500">{formatDate(transaction.createdAt)} · {formatStatus(transaction.source)}</span>
+                                                        </span>
+                                                        <span className={`shrink-0 text-right text-sm font-bold ${transaction.type === "credit" ? "text-emerald-700" : "text-rose-700"}`}>
+                                                            <span className="block">{transaction.type === "credit" ? "+" : "−"}{formatCurrency(transaction.amount)}</span>
+                                                            <span className="mt-1 block text-xs font-normal text-slate-500">Balance: {formatCurrency(transaction.balanceAfter)}</span>
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-end border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
+                                    <button type="button" onClick={() => setShowWallet(false)} className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">Close wallet</button>
+                                </div>
+                            </section>
+                        </div>
+                    )}
 
                     {/* Personal Information */}
                     <section className="profile-section">
@@ -1798,7 +1936,7 @@ function Profile() {
                                             <div className="profile-refund-info-box">
                                                 <strong>Refund notice</strong>
                                                 <p>
-                                                    Because this order has already been paid through Razorpay, a refund of {formatCurrency(selectedOrderAction.totalAmount)} will be recorded as pending after cancellation. The refund is handled separately from the cancellation.
+                                                    Because this order was paid through Razorpay, {formatCurrency(selectedOrderAction.totalAmount)} will be credited to your AquaCart wallet when the cancellation succeeds.
                                                 </p>
                                             </div>
                                         )}

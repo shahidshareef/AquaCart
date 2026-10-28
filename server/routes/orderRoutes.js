@@ -13,6 +13,7 @@ const {
   cancelCustomerOrderController,
   requestOrderReturnController,
   reviewOrderReturnController,
+  completeOrderReturnController,
 } = require("../controllers/orderController");
 
 const router = express.Router();
@@ -63,6 +64,14 @@ router.patch(
   authMiddleware,
   roleMiddleware("admin"),
   reviewOrderReturnController
+);
+
+// Admin: complete an approved return after the returned goods are received.
+router.patch(
+  "/:id/return-complete",
+  authMiddleware,
+  roleMiddleware("admin"),
+  completeOrderReturnController
 );
 
 // Admin: update ordinary order statuses.
