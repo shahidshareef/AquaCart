@@ -52,6 +52,34 @@ function Checkout() {
     const [placingOrder, setPlacingOrder] = useState(false);
     const [orderError, setOrderError] = useState("");
     const [razorpayReady, setRazorpayReady] = useState(false);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [walletLoading, setWalletLoading] = useState(true);
+    const [walletAmount, setWalletAmount] = useState("0");
+    const [walletError, setWalletError] = useState("");
+
+    // Automatically apply the available wallet balance, capped at the
+    // current order total. The backend independently validates this amount.
+    useEffect(() => {
+        if (walletLoading || summaryLoading || !checkoutSummary) {
+            return;
+        }
+
+        const orderTotal = Number(
+            checkoutSummary.totalAmount ?? checkoutSummary.total ?? 0
+        );
+        const safeBalance = Number.isFinite(Number(walletBalance))
+            ? Math.max(0, Number(walletBalance))
+            : 0;
+        const safeTotal = Number.isFinite(orderTotal)
+            ? Math.max(0, orderTotal)
+            : 0;
+        const suggestedWalletAmount = Math.round(
+            Math.min(safeBalance, safeTotal) * 100
+        ) / 100;
+
+        setWalletAmount(String(suggestedWalletAmount));
+        setWalletError("");
+    }, [walletBalance, walletLoading, checkoutSummary, summaryLoading]);
 
     // Load Razorpay Checkout SDK
     useEffect(() => {
@@ -157,6 +185,42 @@ function Checkout() {
         }
     }
 
+    // Fetch the signed-in customer's wallet balance.
+    async function fetchWalletBalance() {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            setWalletBalance(0);
+            setWalletLoading(false);
+            return;
+        }
+
+        try {
+            setWalletLoading(true);
+            setWalletError("");
+
+            const response = await fetch(`${API_BASE_URL}/api/wallet`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Unable to load wallet balance.");
+            }
+
+            const balance = Number(result.data?.balance);
+            setWalletBalance(Number.isFinite(balance) && balance >= 0 ? balance : 0);
+        } catch (error) {
+            console.error(error);
+            setWalletBalance(0);
+            setWalletError("Your wallet balance could not be loaded. You can still pay with Razorpay without using your wallet.");
+        } finally {
+            setWalletLoading(false);
+        }
+    }
+
     // Fetch checkout summary
     async function fetchCheckoutSummary() {
         const token = localStorage.getItem("token");
@@ -204,6 +268,7 @@ function Checkout() {
     useEffect(() => {
         fetchAddresses();
         fetchCheckoutSummary();
+        fetchWalletBalance();
     }, []);
 
     // Apply coupon
@@ -391,24 +456,31 @@ function Checkout() {
                 return;
             }
 
-            // Razorpay online payment
+            // Online payment: use the selected wallet amount first, then pay
+            // only the remaining balance through Razorpay.
             if (paymentMethod === "razorpay") {
-                const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+                const orderTotal = Number(
+                    checkoutSummary.totalAmount ?? checkoutSummary.total
+                );
+                const requestedWalletAmount = Number(walletAmount);
+                const maximumWalletAmount = Math.min(
+                    Math.max(0, Number(walletBalance) || 0),
+                    Math.max(0, orderTotal || 0)
+                );
 
-                if (!keyId) {
-                    throw new Error(
-                        "Razorpay Key ID is missing. Check client/.env and restart Vite."
-                    );
+                if (
+                    !Number.isFinite(requestedWalletAmount) ||
+                    requestedWalletAmount < 0 ||
+                    requestedWalletAmount > maximumWalletAmount + 0.001
+                ) {
+                    throw new Error("Choose a wallet amount within your available balance and order total.");
                 }
 
-                if (!razorpayReady || !window.Razorpay) {
-                    throw new Error(
-                        "Razorpay is still loading. Please try again in a moment."
-                    );
-                }
+                const normalizedWalletAmount =
+                    Math.round(requestedWalletAmount * 100) / 100;
 
-                // Backend calculates the final amount and creates
-                // a pending order and payment record.
+                // Ask the backend to calculate the total and decide whether
+                // this is a wallet-only order or a mixed wallet/Razorpay order.
                 const response = await fetch(
                     `${API_BASE_URL}/api/payments/create-order`,
                     {
@@ -417,19 +489,38 @@ function Checkout() {
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${token}`
                         },
-                        body: JSON.stringify(requestBody)
+                        body: JSON.stringify({
+                            ...requestBody,
+                            walletAmount: normalizedWalletAmount
+                        })
                     }
                 );
 
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(
-                        result.message || "Failed to initialize payment."
-                    );
+                    throw new Error(result.message || "Failed to initialize payment.");
                 }
 
                 const paymentData = result.data;
+
+                // A wallet-only order has no Razorpay order ID or SDK step.
+                if (paymentData?.paymentMethod === "wallet") {
+                    navigate("/order-success", {
+                        state: { orderId: paymentData.orderId }
+                    });
+                    return;
+                }
+
+                const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+                if (!keyId) {
+                    throw new Error("Razorpay Key ID is missing. Check client/.env and restart Vite.");
+                }
+
+                if (!razorpayReady || !window.Razorpay) {
+                    throw new Error("Razorpay is still loading. Please try again in a moment.");
+                }
 
                 if (
                     !paymentData?.razorpayOrderId ||
@@ -438,8 +529,37 @@ function Checkout() {
                     paymentData.amount <= 0 ||
                     paymentData.currency !== "INR"
                 ) {
+                    throw new Error("The server returned invalid payment details.");
+                }
+
+                // Verify that the backend used the wallet contribution before
+                // opening Razorpay. Razorpay amount is always in paise.
+                const expectedRazorpayAmount = Math.round(
+                    (orderTotal - normalizedWalletAmount) * 100
+                ) / 100;
+                const expectedRazorpayPaise = Math.round(
+                    expectedRazorpayAmount * 100
+                );
+
+                console.log("[wallet-checkout:client-response]", {
+                    orderTotal,
+                    requestedWalletAmount: normalizedWalletAmount,
+                    serverWalletAmount: paymentData.walletAmount,
+                    serverRazorpayAmount: paymentData.razorpayAmount,
+                    serverAmountPaise: paymentData.amount,
+                    expectedRazorpayAmount,
+                    expectedRazorpayPaise
+                });
+
+                if (
+                    Math.round(Number(paymentData.walletAmount) * 100) !==
+                        Math.round(normalizedWalletAmount * 100) ||
+                    Math.round(Number(paymentData.razorpayAmount) * 100) !==
+                        Math.round(expectedRazorpayAmount * 100) ||
+                    paymentData.amount !== expectedRazorpayPaise
+                ) {
                     throw new Error(
-                        "The server returned invalid payment details."
+                        `Wallet checkout mismatch. Razorpay should charge ₹${expectedRazorpayAmount.toFixed(2)}, but the server returned ₹${(Number(paymentData.amount) / 100).toFixed(2)}. Payment was not opened.`
                     );
                 }
 
@@ -448,18 +568,15 @@ function Checkout() {
                     amount: paymentData.amount,
                     currency: paymentData.currency,
                     name: "AquaCart",
-                    description: "Payment for your AquaCart order",
+                    description: normalizedWalletAmount > 0
+                        ? `Wallet ₹${normalizedWalletAmount.toFixed(2)} + Razorpay payment`
+                        : "Payment for your AquaCart order",
                     order_id: paymentData.razorpayOrderId,
-
                     prefill: {
                         name: selectedAddress.fullName || "",
                         contact: selectedAddress.phone || ""
                     },
-
-                    theme: {
-                        color: "#0EA5E9"
-                    },
-
+                    theme: { color: "#0EA5E9" },
                     handler: async function (paymentResponse) {
                         try {
                             setOrderError("");
@@ -474,45 +591,36 @@ function Checkout() {
                                         Authorization: `Bearer ${token}`
                                     },
                                     body: JSON.stringify({
-                                        razorpay_order_id:
-                                            paymentResponse.razorpay_order_id,
-                                        razorpay_payment_id:
-                                            paymentResponse.razorpay_payment_id,
-                                        razorpay_signature:
-                                            paymentResponse.razorpay_signature
+                                        razorpay_order_id: paymentResponse.razorpay_order_id,
+                                        razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                        razorpay_signature: paymentResponse.razorpay_signature
                                     })
                                 }
                             );
 
-                            const verificationResult =
-                                await verificationResponse.json();
+                            const verificationResult = await verificationResponse.json();
 
                             if (!verificationResponse.ok) {
                                 throw new Error(
                                     verificationResult.message ||
-                                        "Payment verification failed. If money was deducted, contact support before retrying."
+                                    "Payment verification failed. If money was deducted, contact support before retrying."
                                 );
                             }
 
                             navigate("/order-success", {
                                 state: {
-                                    orderId:
-                                        verificationResult.data?.orderId ||
-                                        paymentData.orderId
+                                    orderId: verificationResult.data?.orderId || paymentData.orderId
                                 }
                             });
                         } catch (error) {
                             console.error(error);
-
                             setOrderError(
-                                error.message ||
-                                    "Payment verification failed. Contact support before retrying."
+                                error.message || "Payment verification failed. Contact support before retrying."
                             );
                         } finally {
                             setPlacingOrder(false);
                         }
                     },
-
                     modal: {
                         ondismiss: function () {
                             setPlacingOrder(false);
@@ -526,28 +634,23 @@ function Checkout() {
                 const razorpay = new window.Razorpay(options);
 
                 razorpay.on("payment.failed", function (paymentFailure) {
-                    console.error(
-                        "Razorpay payment failed:",
-                        paymentFailure.error
-                    );
-
+                    console.error("Razorpay payment failed:", paymentFailure.error);
                     setPlacingOrder(false);
-
                     setOrderError(
-                        paymentFailure.error?.description ||
-                            "Payment failed. Please try again."
+                        paymentFailure.error?.description || "Payment failed. Please try again."
                     );
                 });
 
+                
                 razorpay.open();
                 return;
             }
         } catch (error) {
-            console.error(error);
+            console.error("Checkout error:", error);
             setOrderError(
-                error.message || "Failed to process your order."
+                error.message ||
+                    "Failed to place your order. Please try again."
             );
-        } finally {
             setPlacingOrder(false);
         }
     }
@@ -1077,6 +1180,101 @@ function Checkout() {
                                 </span>
                             </label>
                         </div>
+
+                        {paymentMethod === "razorpay" && (
+                            <div className="checkout-wallet-payment">
+                                <div className="checkout-wallet-payment-heading">
+                                    <strong>Use AquaCart Wallet</strong>
+                                    <span>
+                                        {walletLoading
+                                            ? "Loading balance…"
+                                            : `Available balance: ₹${walletBalance.toFixed(2)}`}
+                                    </span>
+                                </div>
+
+                                <label htmlFor="walletAmount">
+                                    Wallet amount to use (₹)
+                                </label>
+                                <input
+                                    id="walletAmount"
+                                    type="number"
+                                    min="0"
+                                    max={Math.min(
+                                        walletBalance,
+                                        Number(checkoutSummary?.totalAmount ?? checkoutSummary?.total) || 0
+                                    )}
+                                    step="0.01"
+                                    inputMode="decimal"
+                                    value={walletAmount}
+                                    disabled={walletLoading || walletBalance <= 0 || placingOrder}
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+                                        const maximum = Math.min(
+                                            Math.max(0, Number(walletBalance) || 0),
+                                            Math.max(
+                                                0,
+                                                Number(
+                                                    checkoutSummary?.totalAmount ??
+                                                    checkoutSummary?.total ??
+                                                    0
+                                                ) || 0
+                                            )
+                                        );
+
+                                        // Let the customer clear the field while
+                                        // editing, but never retain a value above
+                                        // the wallet balance or order total.
+                                        if (value === "") {
+                                            setWalletAmount("");
+                                        } else {
+                                            const parsed = Number(value);
+                                            setWalletAmount(
+                                                String(
+                                                    Math.round(
+                                                        Math.min(
+                                                            Math.max(0, Number.isFinite(parsed) ? parsed : 0),
+                                                            maximum
+                                                        ) * 100
+                                                    ) / 100
+                                                )
+                                            );
+                                        }
+                                        setWalletError("");
+                                        setOrderError("");
+                                    }}
+                                    aria-describedby="walletAmountHelp"
+                                />
+                                <p id="walletAmountHelp">
+                                    Enter any amount up to ₹{Math.min(
+                                        walletBalance,
+                                        Number(checkoutSummary?.totalAmount ?? checkoutSummary?.total) || 0
+                                    ).toFixed(2)}. The remaining amount will be paid through Razorpay.
+                                </p>
+                                {walletError && (
+                                    <p className="checkout-wallet-error" role="status">
+                                        {walletError}
+                                    </p>
+                                )}
+                                {Number(walletAmount) > 0 && (checkoutSummary?.totalAmount ?? checkoutSummary?.total) != null && (
+                                    <p className="checkout-wallet-breakdown">
+                                        Wallet: ₹{Math.min(
+                                            Math.max(0, Number(walletAmount) || 0),
+                                            walletBalance,
+                                            Number(checkoutSummary.totalAmount ?? checkoutSummary.total)
+                                        ).toFixed(2)}
+                                        <span> · </span>
+                                        Razorpay: ₹{Math.max(
+                                            0,
+                                            Number(checkoutSummary.totalAmount ?? checkoutSummary.total) - Math.min(
+                                                Math.max(0, Number(walletAmount) || 0),
+                                                walletBalance,
+                                                Number(checkoutSummary.totalAmount ?? checkoutSummary.total)
+                                            )
+                                        ).toFixed(2)}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </section>
 
                     <aside className="checkout-summary">
@@ -1236,12 +1434,14 @@ function Checkout() {
                                 !checkoutSummary ||
                                 !checkoutSummary.items?.length ||
                                 (paymentMethod === "razorpay" &&
+                                    Number(walletAmount) < Number(checkoutSummary?.totalAmount || 0) &&
                                     !razorpayReady)
                             }
                         >
                             {placingOrder
                                 ? "Processing..."
                                 : paymentMethod === "razorpay" &&
+                                  Number(walletAmount) < Number(checkoutSummary?.totalAmount || 0) &&
                                   !razorpayReady
                                 ? "Loading Payment..."
                                 : "Place Order"}
@@ -1316,4 +1516,4 @@ function Checkout() {
     );
 }
 
-export default Checkout; 
+export default Checkout;

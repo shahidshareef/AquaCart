@@ -1087,3 +1087,78 @@
 .order-success-actions a:hover {
     background: #000C11;
 }
+
+/* Wallet contribution controls for mixed wallet + Razorpay checkout */
+.checkout-wallet-payment {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #CBD5E1;
+    border-radius: 12px;
+    background: #F8FAFC;
+}
+
+.checkout-wallet-payment-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.checkout-wallet-payment-heading strong {
+    color: #0F172A;
+    font-size: 15px;
+}
+
+.checkout-wallet-payment-heading span,
+.checkout-wallet-payment > p {
+    color: #64748B;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.checkout-wallet-payment label {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.checkout-wallet-payment input[type="number"] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #0F172A;
+    font: inherit;
+}
+
+.checkout-wallet-payment input[type="number"]:focus {
+    outline: 2px solid #7DD3FC;
+    outline-offset: 1px;
+    border-color: #0EA5E9;
+}
+
+.checkout-wallet-payment input[type="number"]:disabled {
+    cursor: not-allowed;
+    background: #F1F5F9;
+}
+
+.checkout-wallet-payment #walletAmountHelp,
+.checkout-wallet-payment .checkout-wallet-breakdown,
+.checkout-wallet-payment .checkout-wallet-error {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.checkout-wallet-payment .checkout-wallet-breakdown {
+    color: #0F766E;
+    font-weight: 600;
+}
+
+.checkout-wallet-payment .checkout-wallet-error {
+    color: #B91C1C;
+}

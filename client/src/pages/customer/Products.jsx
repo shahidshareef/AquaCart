@@ -24,7 +24,7 @@ function Products() {
         currentPage: 1,
         totalPages: 1,
         totalProducts: 0,
-        limit: 8,
+        limit: 9,
     });
 
     useEffect(() => {
@@ -89,7 +89,7 @@ function Products() {
                 }
 
                 params.append("page", currentPage);
-                params.append("limit", 8);
+                params.append("limit", 9);
 
                 const response = await fetch(
                     `${API_BASE_URL}/api/products?${params.toString()}`,
@@ -110,7 +110,7 @@ function Products() {
                         currentPage: 1,
                         totalPages: 1,
                         totalProducts: 0,
-                        limit: 8,
+                        limit: 9,
                     }
                 );
             } catch (error) {
