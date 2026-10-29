@@ -37,7 +37,6 @@ async function createAddressController(req, res) {
             pincode,
             isDefault
         } = req.body;
-
         if (
             !fullName?.trim() ||
             !phone?.trim() ||

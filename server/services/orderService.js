@@ -5,6 +5,8 @@ const Address = require("../models/Address");
 const ProductVariant = require("../models/ProductVariant");
 const Coupon = require("../models/Coupon");
 const Payment = require("../models/Payment");
+const Wallet = require("../models/Wallet");
+const { debitWalletInSession } = require("./walletLedgerService");
 
 function getAllOrders() {
     return Order.find()
@@ -170,8 +172,46 @@ async function getRazorpayCheckoutDetails(
 async function createPendingRazorpayOrder(
     userId,
     checkoutDetails,
-    razorpayOrderId
+    razorpayOrderId,
+    walletAmount = 0
 ) {
+    const normalizedWalletAmount = Math.round(Number(walletAmount) * 100) / 100;
+    const totalAmount = Math.round(checkoutDetails.totalAmount * 100) / 100;
+
+    if (
+        !Number.isFinite(normalizedWalletAmount) ||
+        normalizedWalletAmount < 0
+    ) {
+        throw new Error("Invalid wallet payment amount");
+    }
+
+    if (normalizedWalletAmount > totalAmount) {
+        throw new Error("Wallet payment cannot exceed the order total");
+    }
+
+    const razorpayAmount =
+        Math.round((totalAmount - normalizedWalletAmount) * 100) / 100;
+
+    if (razorpayAmount <= 0) {
+        throw new Error(
+            "A full wallet payment does not require a Razorpay order"
+        );
+    }
+
+    const wallet = await Wallet.findOne({ user: userId });
+
+    if (normalizedWalletAmount > 0) {
+        if (!wallet) {
+            throw new Error("Wallet not found");
+        }
+
+        const availableBalance = Math.round(wallet.balance * 100) / 100;
+
+        if (normalizedWalletAmount > availableBalance) {
+            throw new Error("Insufficient wallet balance");
+        }
+    }
+
     const session = await mongoose.startSession();
 
     try {
@@ -184,7 +224,7 @@ async function createPendingRazorpayOrder(
                     user: userId,
                     orderItems: checkoutDetails.orderItems,
                     shippingAddress: checkoutDetails.shippingAddress,
-                    totalAmount: checkoutDetails.totalAmount,
+                    totalAmount,
                     couponCode: checkoutDetails.couponCode,
                     discountAmount: checkoutDetails.discountAmount,
                     paymentMethod: "razorpay",
@@ -202,7 +242,9 @@ async function createPendingRazorpayOrder(
                     user: userId,
                     paymentMethod: "razorpay",
                     razorpayOrderId,
-                    amount: checkoutDetails.totalAmount,
+                    amount: razorpayAmount,
+                    walletAmount: normalizedWalletAmount,
+                    razorpayAmount,
                     status: "pending"
                 }],
                 { session }
@@ -382,6 +424,34 @@ async function completeRazorpayOrder(
                 }
             }
 
+            // Apply the selected wallet portion only after Razorpay has been
+            // verified as captured. The debit and order/payment completion are
+            // committed together, and the ledger key makes retries idempotent.
+            if (payment.walletAmount > 0) {
+                const walletDebit = await debitWalletInSession({
+                    userId,
+                    amount: payment.walletAmount,
+                    orderId: order._id,
+                    description: `Wallet contribution for order ${order._id}`,
+                    idempotencyKey: `wallet-purchase:${order._id}`,
+                    session
+                });
+
+                console.log("[wallet-checkout:wallet-debit]", {
+                    orderId: String(order._id),
+                    userId: String(userId),
+                    amountDebited: payment.walletAmount,
+                    debited: walletDebit.debited,
+                    balanceAfter: walletDebit.balanceAfter
+                });
+            } else {
+                console.warn("[wallet-checkout:no-wallet-debit]", {
+                    orderId: String(order._id),
+                    userId: String(userId),
+                    storedWalletAmount: payment.walletAmount
+                });
+            }
+
             payment.transactionId = razorpayPaymentId;
             payment.status = "paid";
 
@@ -398,6 +468,131 @@ async function completeRazorpayOrder(
         });
 
         return completedOrder;
+    } finally {
+        await session.endSession();
+    }
+}
+
+async function createWalletPaidOrder(userId, checkoutDetails) {
+    const totalAmount = Math.round(Number(checkoutDetails.totalAmount) * 100) / 100;
+
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        throw new Error("Wallet payment total must be greater than zero");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+        let completedOrder;
+        let payment;
+
+        await session.withTransaction(async () => {
+            const cart = await Cart.findOne({ user: userId }).session(session);
+
+            if (!cart || cart.items.length === 0) {
+                throw new Error("Your cart is empty");
+            }
+
+            const cartItems = cart.items.map((item) => ({
+                productId: String(item.product),
+                variantId: String(item.variant),
+                quantity: item.quantity
+            }));
+            const requestedItems = checkoutDetails.orderItems.map((item) => ({
+                productId: String(item.product),
+                variantId: String(item.variant),
+                quantity: item.quantity
+            }));
+            const sortItems = (items) => items.sort((a, b) =>
+                `${a.productId}:${a.variantId}`.localeCompare(`${b.productId}:${b.variantId}`)
+            );
+
+            if (JSON.stringify(sortItems(cartItems)) !== JSON.stringify(sortItems(requestedItems))) {
+                throw new Error("Cart changed after checkout; please try again");
+            }
+
+            const createdOrders = await Order.create([{
+                user: userId,
+                orderItems: checkoutDetails.orderItems,
+                shippingAddress: checkoutDetails.shippingAddress,
+                totalAmount,
+                couponCode: checkoutDetails.couponCode,
+                discountAmount: checkoutDetails.discountAmount,
+                paymentMethod: "wallet",
+                paymentStatus: "paid",
+                orderStatus: "confirmed"
+            }], { session });
+            const order = createdOrders[0];
+
+            // Decrement inventory atomically with the wallet debit and order.
+            for (const item of order.orderItems) {
+                const variant = await ProductVariant.findOneAndUpdate(
+                    {
+                        _id: item.variant,
+                        product: item.product,
+                        status: "active",
+                        stock: { $gte: item.quantity }
+                    },
+                    { $inc: { stock: -item.quantity } },
+                    { new: true, session, runValidators: true }
+                );
+
+                if (!variant) {
+                    throw new Error("Insufficient stock to complete the order");
+                }
+            }
+
+            if (order.couponCode) {
+                const coupon = await Coupon.findOne({
+                    code: order.couponCode,
+                    status: "active"
+                }).session(session);
+
+                if (!coupon) {
+                    throw new Error("Coupon is no longer available");
+                }
+
+                const couponFilter = { _id: coupon._id, status: "active" };
+                if (coupon.usageLimit !== undefined) {
+                    couponFilter.usedCount = { $lt: coupon.usageLimit };
+                }
+
+                const couponUpdate = await Coupon.updateOne(
+                    couponFilter,
+                    { $inc: { usedCount: 1 } },
+                    { session }
+                );
+                if (couponUpdate.modifiedCount !== 1) {
+                    throw new Error("Coupon usage limit has been reached");
+                }
+            }
+
+            await debitWalletInSession({
+                userId,
+                amount: totalAmount,
+                orderId: order._id,
+                description: `Full wallet payment for order ${order._id}`,
+                idempotencyKey: `wallet-purchase:${order._id}`,
+                session
+            });
+
+            const createdPayments = await Payment.create([{
+                order: order._id,
+                user: userId,
+                paymentMethod: "wallet",
+                amount: totalAmount,
+                walletAmount: totalAmount,
+                razorpayAmount: 0,
+                status: "paid"
+            }], { session });
+            payment = createdPayments[0];
+
+            cart.items = [];
+            await cart.save({ session });
+            completedOrder = order;
+        });
+
+        return { order: completedOrder, payment };
     } finally {
         await session.endSession();
     }
@@ -604,5 +799,6 @@ module.exports = {
     createCustomerOrder,
     getRazorpayCheckoutDetails,
     createPendingRazorpayOrder,
-    completeRazorpayOrder
+    completeRazorpayOrder,
+    createWalletPaidOrder
 };

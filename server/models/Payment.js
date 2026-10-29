@@ -16,7 +16,7 @@ const paymentSchema = new mongoose.Schema(
 
         paymentMethod: {
             type: String,
-            enum: ["razorpay", "cod"],
+            enum: ["razorpay", "cod", "wallet"],
             required: true
         },
 
@@ -34,6 +34,20 @@ const paymentSchema = new mongoose.Schema(
         amount: {
             type: Number,
             required: true,
+            min: 0
+        },
+
+        // Amount paid using the customer's wallet.
+        walletAmount: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+
+        // Amount that must be paid through Razorpay.
+        razorpayAmount: {
+            type: Number,
+            default: 0,
             min: 0
         },
 

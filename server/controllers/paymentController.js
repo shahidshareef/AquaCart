@@ -9,7 +9,8 @@ const {
 const {
     getRazorpayCheckoutDetails,
     createPendingRazorpayOrder,
-    completeRazorpayOrder
+    completeRazorpayOrder,
+    createWalletPaidOrder
 } = require("../services/orderService");
 
 const Payment = require("../models/Payment");
@@ -17,7 +18,7 @@ const Order = require("../models/Order");
 
 async function createPaymentOrderController(req, res) {
     try {
-        const { addressId, couponCode } = req.body;
+        const { addressId, couponCode, walletAmount = 0 } = req.body;
 
         if (!addressId) {
             return res.status(400).json({
@@ -32,32 +33,101 @@ async function createPaymentOrderController(req, res) {
             couponCode
         );
 
-        const amountInPaise = Math.round(
-            checkoutDetails.totalAmount * 100
-        );
+        const normalizedWalletAmount =
+            Math.round(Number(walletAmount) * 100) / 100;
 
         if (
-            !Number.isSafeInteger(amountInPaise) ||
-            amountInPaise <= 0
+            !Number.isFinite(normalizedWalletAmount) ||
+            normalizedWalletAmount < 0
         ) {
             return res.status(400).json({
-                message: "Invalid checkout total"
+                message: "Invalid wallet payment amount"
             });
         }
 
-        // Create the Razorpay order.
+        if (normalizedWalletAmount > checkoutDetails.totalAmount) {
+            return res.status(400).json({
+                message: "Wallet payment cannot exceed the order total"
+            });
+        }
+
+        const orderTotal =
+            Math.round(Number(checkoutDetails.totalAmount) * 100) / 100;
+        const razorpayAmount =
+            Math.round((orderTotal - normalizedWalletAmount) * 100) / 100;
+
+        console.log("[wallet-checkout:create-order]", {
+            userId: String(req.user.userId),
+            orderTotal,
+            requestedWalletAmount: walletAmount,
+            normalizedWalletAmount,
+            razorpayAmount,
+            razorpayAmountInPaise: Math.round(razorpayAmount * 100)
+        });
+
+        if (razorpayAmount <= 0) {
+            const { order, payment } = await createWalletPaidOrder(
+                req.user.userId,
+                checkoutDetails
+            );
+
+            return res.status(201).json({
+                message: "Order paid successfully using your wallet",
+                data: {
+                    orderId: order._id,
+                    paymentId: payment._id,
+                    paymentMethod: "wallet",
+                    paymentStatus: order.paymentStatus,
+                    orderStatus: order.orderStatus,
+                    orderTotal: checkoutDetails.totalAmount,
+                    walletAmount: normalizedWalletAmount,
+                    razorpayAmount: 0
+                }
+            });
+        }
+
+        const amountInPaise = Math.round(razorpayAmount * 100);
+
+        if (!Number.isSafeInteger(amountInPaise) || amountInPaise <= 0) {
+            return res.status(400).json({
+                message: "Invalid Razorpay checkout amount"
+            });
+        }
+
+        // Create the Razorpay order only for the amount remaining after
+        // the customer's selected wallet amount.
         const receipt = `aquacart_${Date.now()}`;
 
         const razorpayOrder = await createRazorpayOrder(
-            checkoutDetails.totalAmount,
+            razorpayAmount,
             receipt
         );
 
-        // Save pending records in AquaCart.
+        // Never continue if Razorpay created an order for a different amount.
+        if (
+            Number(razorpayOrder.amount) !== amountInPaise ||
+            razorpayOrder.currency !== "INR"
+        ) {
+            console.error("[wallet-checkout:razorpay-amount-mismatch]", {
+                expectedPaise: amountInPaise,
+                actualPaise: razorpayOrder.amount,
+                currency: razorpayOrder.currency,
+                orderTotal,
+                walletAmount: normalizedWalletAmount,
+                razorpayAmount
+            });
+
+            return res.status(502).json({
+                message: "Razorpay amount mismatch. No payment was opened. Please try again."
+            });
+        }
+
+        // Save the pending order/payment with both payment portions.
         const { order, payment } = await createPendingRazorpayOrder(
             req.user.userId,
             checkoutDetails,
-            razorpayOrder.id
+            razorpayOrder.id,
+            normalizedWalletAmount
         );
 
         return res.status(201).json({
@@ -67,7 +137,10 @@ async function createPaymentOrderController(req, res) {
                 paymentId: payment._id,
                 razorpayOrderId: razorpayOrder.id,
                 amount: razorpayOrder.amount,
-                currency: razorpayOrder.currency
+                currency: razorpayOrder.currency,
+                orderTotal,
+                walletAmount: normalizedWalletAmount,
+                razorpayAmount
             }
         });
     } catch (error) {
@@ -79,7 +152,16 @@ async function createPaymentOrderController(req, res) {
             "A cart item is no longer available",
             "Minimum order amount not met",
             "Invalid or expired coupon",
-            "Coupon usage limit has been reached"
+            "Coupon usage limit has been reached",
+            "Invalid wallet payment amount",
+            "Wallet payment cannot exceed the order total",
+            "Wallet not found",
+            "Insufficient wallet balance",
+            "A full wallet payment does not require a Razorpay order",
+            "Wallet payment total must be greater than zero",
+            "Cart changed after checkout; please try again",
+            "Insufficient stock to complete the order",
+            "Coupon is no longer available"
         ];
 
         if (
@@ -188,9 +270,24 @@ async function verifyPaymentController(req, res) {
             razorpay_payment_id
         );
 
+        const expectedRazorpayAmount = Number(
+            paymentRecord.razorpayAmount ?? paymentRecord.amount
+        );
+        const expectedRazorpayPaise = Math.round(expectedRazorpayAmount * 100);
+
+        console.log("[wallet-checkout:verify-payment]", {
+            orderId: String(paymentRecord.order),
+            razorpayOrderId: razorpay_order_id,
+            capturedAmountPaise: capturedPayment.amount,
+            expectedRazorpayAmount,
+            expectedRazorpayPaise,
+            walletAmountToDebit: paymentRecord.walletAmount,
+            paymentStatus: paymentRecord.status
+        });
+
         if (
             capturedPayment.order_id !== razorpay_order_id ||
-            capturedPayment.amount !== Math.round(paymentRecord.amount * 100) ||
+            capturedPayment.amount !== expectedRazorpayPaise ||
             capturedPayment.currency !== "INR"
         ) {
             return res.status(400).json({
@@ -226,7 +323,9 @@ async function verifyPaymentController(req, res) {
             "Cart changed after checkout; order needs review",
             "Insufficient stock to complete the order",
             "Coupon is no longer available",
-            "Coupon usage limit has been reached"
+            "Coupon usage limit has been reached",
+            "Insufficient wallet balance",
+            "Wallet not found"
         ];
 
         if (
