@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { adminFetch } from "../../services/adminApi";
 import AdminLayout from "../../components/admin/AdminLayout";
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 // Supports full Cloudinary URLs and legacy local upload paths.
 function getImageUrl(imagePath) {

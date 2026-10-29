@@ -2,9 +2,7 @@ import { useState } from "react";
 import Header from "../../components/common/Header.jsx";
 import Footer from "../../components/common/Footer.jsx";
 import "../../styles/ContactUs.css";
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 const initialForm = {
     name: "",

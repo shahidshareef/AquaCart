@@ -5,9 +5,7 @@ import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 
 import "../../styles/Checkout.css";
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 const emptyAddressForm = {
     fullName: "",

@@ -73,17 +73,18 @@ async function applyCoupon(userId, couponCode) {
     if (coupon.discountType === "percentage") {
         discount = summary.subtotal * coupon.discountValue / 100;
 
-        if (coupon.maxDiscountAmount !== undefined) {
-            discount = Math.min(
-                discount,
-                coupon.maxDiscountAmount
-            );
+        // Missing/null maximum means no cap. A value of zero is not treated
+        // as an omitted field; admin validation prevents zero from being saved.
+        if (coupon.maxDiscountAmount !== undefined && coupon.maxDiscountAmount !== null) {
+            discount = Math.min(discount, coupon.maxDiscountAmount);
         }
     } else {
         discount = coupon.discountValue;
     }
 
-    discount = Math.min(discount, summary.subtotal);
+    // Use a consistent currency precision and never discount more than subtotal.
+    discount = Math.round(Math.min(discount, summary.subtotal) * 100) / 100;
+    const total = Math.round(Math.max(0, summary.subtotal - discount) * 100) / 100;
 
     return {
         ...summary,
@@ -93,7 +94,7 @@ async function applyCoupon(userId, couponCode) {
             discountValue: coupon.discountValue
         },
         discount,
-        total: summary.subtotal - discount
+        total
     };
 }
 

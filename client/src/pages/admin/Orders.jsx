@@ -1,6 +1,7 @@
 import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 const ORDERS_PER_PAGE = 9;
 
@@ -44,7 +45,7 @@ function Orders() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/admin/orders",
+                `${API_BASE_URL}/api/admin/orders`,
                 {
                     headers: getAuthHeaders(),
                 }
@@ -78,7 +79,7 @@ function Orders() {
             setMessageType("");
 
             const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${orderId}`,
+                `${API_BASE_URL}/api/admin/orders/${orderId}`,
                 {
                     headers: getAuthHeaders(),
                 }
@@ -129,7 +130,7 @@ function Orders() {
             setMessageType("");
 
             const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/status`,
+                `${API_BASE_URL}/api/admin/orders/${selectedOrder._id}/status`,
                 {
                     method: "PUT",
                     headers: {
@@ -200,7 +201,7 @@ function Orders() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/return-request`,
+                `${API_BASE_URL}/api/admin/orders/${selectedOrder._id}/return-request`,
                 {
                     method: "PATCH",
                     headers: {
@@ -275,7 +276,7 @@ function Orders() {
 
         try {
             const response = await fetch(
-                `http://localhost:5000/api/admin/orders/${selectedOrder._id}/return-complete`,
+                `${API_BASE_URL}/api/admin/orders/${selectedOrder._id}/return-complete`,
                 {
                     method: "PATCH",
                     headers: {

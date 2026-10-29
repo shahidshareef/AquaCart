@@ -3,10 +3,7 @@ import { Link } from "react-router-dom";
 import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 import "../../styles/CustomerReviews.css";
-
-const API_BASE_URL = (
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
-).replace(/\/+$/, "");
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 const RATING_FILTERS = [
     { value: "all", label: "All ratings" },

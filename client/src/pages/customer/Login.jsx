@@ -1,3 +1,4 @@
+
 import "../../styles/Login.css";
 import { useState } from "react";
 import { loginUser } from "../../services/authApi";
@@ -6,10 +7,8 @@ import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
 
 function Login() {
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-
     const [message, setMessage] = useState("");
     const [messageType, setMessageType] = useState("");
 
@@ -17,22 +16,16 @@ function Login() {
 
     async function handleSubmit(event) {
         event.preventDefault();
-
         setMessage("");
 
-        if (!email || !password) {
+        if (!email.trim() || !password) {
             setMessage("Email and password are required");
             setMessageType("error");
             return;
         }
 
         try {
-            const response = await loginUser(email, password);
-
-            localStorage.setItem(
-                "token",
-                response.data.token
-            );
+            const response = await loginUser(email.trim(), password);
 
             localStorage.setItem("token", response.data.token);
             localStorage.setItem(
@@ -40,13 +33,14 @@ function Login() {
                 JSON.stringify(response.data.user)
             );
 
-            setMessage(response.data.message);
+            setMessage(
+                response.data.message || "Login successful."
+            );
             setMessageType("success");
 
             setTimeout(() => {
-                navigate("/");
+                navigate("/", { replace: true });
             }, 500);
-
         } catch (error) {
             setMessage(
                 error.response?.data?.message ||
@@ -70,7 +64,6 @@ function Login() {
 
             <div className="login-page">
                 <div className="login-card">
-
                     <h1>Welcome Back</h1>
 
                     <p>
@@ -79,40 +72,51 @@ function Login() {
 
                     {message && (
                         <div
-                            className={`mb-5 rounded-md px-4 py-3 text-sm ${messageType === "error"
+                            className={`mb-5 rounded-md px-4 py-3 text-sm ${
+                                messageType === "error"
                                     ? "bg-red-100 text-red-700"
                                     : "bg-green-100 text-green-700"
-                                }`}
+                            }`}
+                            role="alert"
                         >
                             {message}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit}>
-
                         <div className="form-group">
-                            <label>Email</label>
+                            <label htmlFor="customer-email">Email</label>
 
                             <input
+                                id="customer-email"
+                                name="email"
                                 type="email"
                                 placeholder="Enter your email"
                                 value={email}
+                                autoComplete="username"
                                 onChange={(event) =>
                                     setEmail(event.target.value)
                                 }
+                                required
                             />
                         </div>
 
                         <div className="form-group">
-                            <label>Password</label>
+                            <label htmlFor="customer-password">
+                                Password
+                            </label>
 
                             <input
+                                id="customer-password"
+                                name="password"
                                 type="password"
                                 placeholder="Enter your password"
                                 value={password}
+                                autoComplete="current-password"
                                 onChange={(event) =>
                                     setPassword(event.target.value)
                                 }
+                                required
                             />
                         </div>
 
@@ -126,7 +130,6 @@ function Login() {
                         <button type="submit">
                             Sign In →
                         </button>
-
                     </form>
 
                     <p className="register-link">
@@ -135,7 +138,6 @@ function Login() {
                             Sign Up
                         </span>
                     </p>
-
                 </div>
             </div>
 

@@ -155,8 +155,43 @@ function Coupons() {
             return;
         }
 
-        if (!discountValue || Number(discountValue) < 0) {
-            setMessage("Discount value must be 0 or greater.");
+        const discount = Number(discountValue);
+        const minimum = minimumOrderAmount === "" ? 0 : Number(minimumOrderAmount);
+        const maxDiscount = maxDiscountAmount === "" ? undefined : Number(maxDiscountAmount);
+        const limit = usageLimit === "" ? undefined : Number(usageLimit);
+
+        if (discountValue === "" || !Number.isFinite(discount) || discount <= 0) {
+            setMessage("Discount value must be greater than zero.");
+            setMessageType("error");
+            return;
+        }
+
+        if (!Number.isFinite(minimum) || minimum < 0) {
+            setMessage("Minimum order amount must be zero or greater.");
+            setMessageType("error");
+            return;
+        }
+
+        if (discountType === "percentage" && discount > 100) {
+            setMessage("Percentage discount cannot exceed 100%.");
+            setMessageType("error");
+            return;
+        }
+
+        if (discountType === "fixed" && discount > minimum) {
+            setMessage(`Fixed discount (₹${discount}) cannot exceed the minimum order amount (₹${minimum}).`);
+            setMessageType("error");
+            return;
+        }
+
+        if (maxDiscountAmount !== "" && (!Number.isFinite(maxDiscount) || maxDiscount <= 0)) {
+            setMessage("Maximum discount must be greater than zero, or leave it empty for no limit.");
+            setMessageType("error");
+            return;
+        }
+
+        if (usageLimit !== "" && (!Number.isInteger(limit) || limit < 1)) {
+            setMessage("Usage limit must be a positive whole number.");
             setMessageType("error");
             return;
         }
@@ -187,9 +222,10 @@ function Coupons() {
                     ? 0
                     : Number(minimumOrderAmount),
 
+            // An empty maximum means no maximum discount; do not send zero.
             maxDiscountAmount:
                 maxDiscountAmount === ""
-                    ? 0
+                    ? undefined
                     : Number(maxDiscountAmount),
 
             startDate,
@@ -562,7 +598,8 @@ function Coupons() {
                                     <input
                                         id="discountValue"
                                         type="number"
-                                        min="0"
+                                        min="0.01"
+                                        step="0.01"
                                         value={discountValue}
                                         onChange={function (event) {
                                             setDiscountValue(event.target.value);
@@ -607,7 +644,8 @@ function Coupons() {
                                     <input
                                         id="maxDiscountAmount"
                                         type="number"
-                                        min="0"
+                                        min="0.01"
+                                        step="0.01"
                                         value={maxDiscountAmount}
                                         onChange={function (event) {
                                             setMaxDiscountAmount(event.target.value);

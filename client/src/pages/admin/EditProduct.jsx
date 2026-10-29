@@ -1,10 +1,10 @@
-import { adminFetch } from "../../services/adminApi";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { adminFetch } from "../../services/adminApi";
+import { API_BASE_URL } from "../../config/apiConfig";
 
 function EditProduct() {
-
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -14,26 +14,21 @@ function EditProduct() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
     const [saving, setSaving] = useState(false);
 
     const [productName, setProductName] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState("");
-
     const [selectedImage, setSelectedImage] = useState(null);
 
-
-    useEffect(function () {
+    useEffect(() => {
+        let cancelled = false;
 
         async function getProductData() {
-
             try {
-
                 const productResponse = await adminFetch(
                     `/api/admin/products/${id}`
                 );
-
                 const productData = await productResponse.json();
 
                 if (!productResponse.ok) {
@@ -42,17 +37,11 @@ function EditProduct() {
                     );
                 }
 
-                setProduct(productData.data);
-
-                setProductName(productData.data.name);
-                setDescription(productData.data.description);
-                setCategory(productData.data.category?._id || "");
-
+                const currentProduct = productData.data;
 
                 const variantResponse = await adminFetch(
                     `/api/admin/products/${id}/variants`
                 );
-
                 const variantData = await variantResponse.json();
 
                 if (!variantResponse.ok) {
@@ -61,13 +50,9 @@ function EditProduct() {
                     );
                 }
 
-                setVariants(variantData.data);
-
-
                 const categoryResponse = await adminFetch(
                     "/api/admin/categories"
                 );
-
                 const categoryData = await categoryResponse.json();
 
                 if (!categoryResponse.ok) {
@@ -76,79 +61,77 @@ function EditProduct() {
                     );
                 }
 
-                setCategories(categoryData.data);
+                if (cancelled) return;
 
-            } catch (error) {
-
-                console.error(error);
-                setError(error.message);
-
+                setProduct(currentProduct);
+                setProductName(currentProduct.name || "");
+                setDescription(currentProduct.description || "");
+                setCategory(currentProduct.category?._id || "");
+                setVariants(variantData.data || []);
+                setCategories(categoryData.data || []);
+            } catch (err) {
+                if (!cancelled) {
+                    console.error("Failed to load product:", err);
+                    setError(err.message || "Failed to load product data.");
+                }
             } finally {
-
-                setLoading(false);
-
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
         }
 
         getProductData();
 
+        return () => {
+            cancelled = true;
+        };
     }, [id]);
 
-
     function handleVariantChange(variantId, field, value) {
-
-        setVariants(function (currentVariants) {
-
-            return currentVariants.map(function (variant) {
-
-                if (variant._id === variantId) {
-
-                    return {
-                        ...variant,
-                        [field]: value
-                    };
-
-                }
-
-                return variant;
-
-            });
-
-        });
-
+        setVariants((currentVariants) =>
+            currentVariants.map((variant) =>
+                variant._id === variantId
+                    ? { ...variant, [field]: value }
+                    : variant
+            )
+        );
     }
 
-
     function handleImageChange(event) {
-
-        const file = event.target.files[0];
+        const file = event.target.files?.[0];
 
         if (file) {
             setSelectedImage(file);
         }
-
     }
 
+    function getImageUrl(imagePath) {
+        if (!imagePath) return "";
+
+        // Support absolute URLs and relative paths returned by the API.
+        if (/^https?:\/\//i.test(imagePath)) {
+            return imagePath;
+        }
+
+        return `${API_BASE_URL.replace(/\/+$/, "")}/${imagePath.replace(/^\/+/, "")}`;
+    }
 
     async function handleSaveProduct() {
+        if (saving) return;
 
         setSaving(true);
         setError("");
 
         try {
-
             const productFormData = new FormData();
-
-            productFormData.append("name", productName);
+            productFormData.append("name", productName.trim());
             productFormData.append("description", description);
             productFormData.append("category", category);
 
             if (selectedImage) {
                 productFormData.append("image", selectedImage);
             }
-
-
-            // Update Product
 
             const productResponse = await adminFetch(
                 `/api/admin/products/${id}`,
@@ -166,10 +149,21 @@ function EditProduct() {
                 );
             }
 
-
-            // Update Variants
-
             for (const variant of variants) {
+                const price = Number(variant.price);
+                const stock = Number(variant.stock);
+
+                if (!Number.isFinite(price) || price < 0) {
+                    throw new Error(
+                        `Enter a valid price for variant ${variant.sku}.`
+                    );
+                }
+
+                if (!Number.isInteger(stock) || stock < 0) {
+                    throw new Error(
+                        `Enter a valid non-negative stock for variant ${variant.sku}.`
+                    );
+                }
 
                 const variantResponse = await adminFetch(
                     `/api/admin/products/variants/${variant._id}`,
@@ -181,8 +175,8 @@ function EditProduct() {
                         body: JSON.stringify({
                             size: variant.size,
                             sku: variant.sku,
-                            price: Number(variant.price),
-                            stock: Number(variant.stock)
+                            price,
+                            stock
                         })
                     }
                 );
@@ -195,11 +189,7 @@ function EditProduct() {
                         `Failed to update variant ${variant.sku}`
                     );
                 }
-
             }
-
-
-            // Redirect to Products after successful update
 
             navigate("/admin/products", {
                 state: {
@@ -207,72 +197,63 @@ function EditProduct() {
                     messageType: "success"
                 }
             });
-
-        } catch (error) {
-
-            console.error(error);
-            setError(error.message);
-
+        } catch (err) {
+            console.error("Save product error:", err);
+            setError(err.message || "Failed to save product.");
         } finally {
-
             setSaving(false);
-
         }
     }
-
 
     function handleCancel() {
         navigate("/admin/products");
     }
 
-
     if (loading) {
-
         return (
             <AdminLayout pageTitle="Edit Product">
-
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
-
                     <p className="text-sm text-slate-500">
                         Loading product...
                     </p>
-
                 </div>
-
             </AdminLayout>
         );
-
     }
 
-
-    if (error) {
-
+    if (error && !product) {
         return (
             <AdminLayout pageTitle="Edit Product">
-
                 <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-
-                    <p className="text-sm text-red-600">
-                        {error}
-                    </p>
-
+                    <p className="text-sm text-red-600">{error}</p>
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                    >
+                        Back to Products
+                    </button>
                 </div>
-
             </AdminLayout>
         );
-
     }
 
+    if (!product) {
+        return (
+            <AdminLayout pageTitle="Edit Product">
+                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                    <p className="text-sm text-slate-500">
+                        Product could not be loaded.
+                    </p>
+                </div>
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout pageTitle="Edit Product">
-
             <div className="space-y-6">
-
-                {/* Breadcrumb */}
-
                 <div className="text-sm text-slate-500">
-
                     <button
                         type="button"
                         onClick={handleCancel}
@@ -280,319 +261,246 @@ function EditProduct() {
                     >
                         ← Products
                     </button>
-
-                    <span className="mx-2 text-slate-400">
-                        /
-                    </span>
-
-                    <span>
-                        Edit Product
-                    </span>
-
+                    <span className="mx-2 text-slate-400">/</span>
+                    <span>Edit Product</span>
                 </div>
 
-
-                {/* Basic Product Details */}
+                {error && (
+                    <div
+                        role="alert"
+                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600"
+                    >
+                        {error}
+                    </div>
+                )}
 
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
-
                     <h2 className="text-xl font-bold text-slate-900">
                         Edit Product
                     </h2>
-
                     <p className="mt-1 text-sm text-slate-500">
                         Update the product information below.
                     </p>
 
-
                     <div className="mt-6 space-y-5">
-
-                        {/* Product Name */}
-
                         <div>
-
-                            <label className="text-sm font-medium text-slate-700">
+                            <label
+                                htmlFor="productName"
+                                className="text-sm font-medium text-slate-700"
+                            >
                                 Product Name
                             </label>
-
                             <input
+                                id="productName"
                                 type="text"
                                 value={productName}
-                                onChange={function (event) {
-                                    setProductName(event.target.value);
-                                }}
+                                onChange={(event) =>
+                                    setProductName(event.target.value)
+                                }
+                                required
                                 className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-sky-500"
                             />
-
                         </div>
 
-
-                        {/* Category */}
-
                         <div>
-
-                            <label className="text-sm font-medium text-slate-700">
+                            <label
+                                htmlFor="productCategory"
+                                className="text-sm font-medium text-slate-700"
+                            >
                                 Category
                             </label>
-
                             <select
+                                id="productCategory"
                                 value={category}
-                                onChange={function (event) {
-                                    setCategory(event.target.value);
-                                }}
+                                onChange={(event) =>
+                                    setCategory(event.target.value)
+                                }
+                                required
                                 className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-sky-500"
                             >
-
-                                <option value="">
-                                    Select Category
-                                </option>
-
-                                {categories.map(function (categoryItem) {
-
-                                    return (
-                                        <option
-                                            key={categoryItem._id}
-                                            value={categoryItem._id}
-                                        >
-                                            {categoryItem.name}
-                                        </option>
-                                    );
-
-                                })}
-
+                                <option value="">Select Category</option>
+                                {categories.map((categoryItem) => (
+                                    <option
+                                        key={categoryItem._id}
+                                        value={categoryItem._id}
+                                    >
+                                        {categoryItem.name}
+                                    </option>
+                                ))}
                             </select>
-
                         </div>
-
-
-                        {/* Description */}
 
                         <div>
-
-                            <label className="text-sm font-medium text-slate-700">
+                            <label
+                                htmlFor="productDescription"
+                                className="text-sm font-medium text-slate-700"
+                            >
                                 Description
                             </label>
-
                             <textarea
+                                id="productDescription"
                                 value={description}
-                                onChange={function (event) {
-                                    setDescription(event.target.value);
-                                }}
-                                rows="5"
+                                onChange={(event) =>
+                                    setDescription(event.target.value)
+                                }
+                                rows={5}
                                 className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-sky-500"
                             />
-
                         </div>
-
                     </div>
-
                 </div>
 
-
-                {/* Product Image */}
-
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
-
                     <h2 className="text-xl font-bold text-slate-900">
                         Product Media
                     </h2>
-
                     <p className="mt-1 text-sm text-slate-500">
                         Select a new product image if you want to replace the current one.
                     </p>
 
-
                     <div className="mt-5 flex flex-wrap gap-6">
-
-                        {product.images &&
-                            product.images.length > 0 && (
-
-                                <div>
-
-                                    <p className="mb-2 text-xs font-medium uppercase text-slate-400">
-                                        Current Image
-                                    </p>
-
-                                    <img
-                                        src={`${API_BASE_URL}${product.images[0]}`}
-                                        alt={product.name}
-                                        className="h-48 w-48 rounded-xl border border-slate-200 object-cover"
-                                    />
-
-                                </div>
-
-                            )}
-
+                        {product.images?.length > 0 && (
+                            <div>
+                                <p className="mb-2 text-xs font-medium uppercase text-slate-400">
+                                    Current Image
+                                </p>
+                                <img
+                                    src={getImageUrl(product.images[0])}
+                                    alt={product.name}
+                                    className="h-48 w-48 rounded-xl border border-slate-200 object-cover"
+                                />
+                            </div>
+                        )}
 
                         <div>
-
                             <p className="mb-2 text-xs font-medium uppercase text-slate-400">
                                 New Image
                             </p>
-
                             <input
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp"
                                 onChange={handleImageChange}
                                 className="block w-full text-sm text-slate-600"
                             />
-
                             {selectedImage && (
-
                                 <p className="mt-2 text-sm text-sky-600">
                                     Selected: {selectedImage.name}
                                 </p>
-
                             )}
-
                         </div>
-
                     </div>
-
                 </div>
 
-
-                {/* Variants */}
-
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
-
                     <h2 className="text-xl font-bold text-slate-900">
-                        Variants, Pricing & Stock
+                        Variants, Pricing &amp; Stock
                     </h2>
-
                     <p className="mt-1 text-sm text-slate-500">
                         Update the size, SKU, price and available stock.
                     </p>
 
-
                     <div className="mt-6 overflow-x-auto">
-
                         <table className="w-full text-left">
-
                             <thead>
-
                                 <tr className="border-b border-slate-200">
-
                                     <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-500">
                                         Size
                                     </th>
-
                                     <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-500">
                                         SKU
                                     </th>
-
                                     <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-500">
                                         Price
                                     </th>
-
                                     <th className="px-4 py-3 text-xs font-semibold uppercase text-slate-500">
                                         Stock
                                     </th>
-
                                 </tr>
-
                             </thead>
-
-
                             <tbody>
-
-                                {variants.map(function (variant) {
-
-                                    return (
-                                        <tr
-                                            key={variant._id}
-                                            className="border-b border-slate-100"
+                                {variants.map((variant) => (
+                                    <tr
+                                        key={variant._id}
+                                        className="border-b border-slate-100"
+                                    >
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="text"
+                                                value={variant.size ?? ""}
+                                                onChange={(event) =>
+                                                    handleVariantChange(
+                                                        variant._id,
+                                                        "size",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="text"
+                                                value={variant.sku ?? ""}
+                                                onChange={(event) =>
+                                                    handleVariantChange(
+                                                        variant._id,
+                                                        "sku",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={variant.price ?? ""}
+                                                onChange={(event) =>
+                                                    handleVariantChange(
+                                                        variant._id,
+                                                        "price",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                value={variant.stock ?? ""}
+                                                onChange={(event) =>
+                                                    handleVariantChange(
+                                                        variant._id,
+                                                        "stock",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                                {variants.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan={4}
+                                            className="px-4 py-6 text-center text-sm text-slate-500"
                                         >
-
-                                            <td className="px-4 py-4">
-
-                                                <input
-                                                    type="text"
-                                                    value={variant.size}
-                                                    onChange={function (event) {
-                                                        handleVariantChange(
-                                                            variant._id,
-                                                            "size",
-                                                            event.target.value
-                                                        );
-                                                    }}
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                                                />
-
-                                            </td>
-
-
-                                            <td className="px-4 py-4">
-
-                                                <input
-                                                    type="text"
-                                                    value={variant.sku}
-                                                    onChange={function (event) {
-                                                        handleVariantChange(
-                                                            variant._id,
-                                                            "sku",
-                                                            event.target.value
-                                                        );
-                                                    }}
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                                                />
-
-                                            </td>
-
-
-                                            <td className="px-4 py-4">
-
-                                                <input
-                                                    type="number"
-                                                    value={variant.price}
-                                                    onChange={function (event) {
-                                                        handleVariantChange(
-                                                            variant._id,
-                                                            "price",
-                                                            event.target.value
-                                                        );
-                                                    }}
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                                                />
-
-                                            </td>
-
-
-                                            <td className="px-4 py-4">
-
-                                                <input
-                                                    type="number"
-                                                    value={variant.stock}
-                                                    onChange={function (event) {
-                                                        handleVariantChange(
-                                                            variant._id,
-                                                            "stock",
-                                                            event.target.value
-                                                        );
-                                                    }}
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
-                                                />
-
-                                            </td>
-
-                                        </tr>
-                                    );
-
-                                })}
-
+                                            No variants found for this product.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
-
                         </table>
-
                     </div>
-
                 </div>
 
-
-                {/* Action Area */}
-
                 <div className="flex items-center justify-end gap-4">
-
                     <button
                         type="button"
                         onClick={handleCancel}
@@ -601,7 +509,6 @@ function EditProduct() {
                     >
                         Cancel
                     </button>
-
                     <button
                         type="button"
                         onClick={handleSaveProduct}
@@ -610,11 +517,8 @@ function EditProduct() {
                     >
                         {saving ? "Saving..." : "Save Product"}
                     </button>
-
                 </div>
-
             </div>
-
         </AdminLayout>
     );
 }

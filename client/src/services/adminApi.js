@@ -1,5 +1,4 @@
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { API_BASE_URL } from "../config/apiConfig.js";
 
 export async function adminFetch(path, options = {}) {
     const token = localStorage.getItem("token");

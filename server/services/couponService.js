@@ -12,9 +12,20 @@ async function createCoupon(couponData) {
 }
 
 async function updateCoupon(couponId, couponData) {
+    const update = { $set: { ...couponData } };
+
+    // Clearing the optional maximum discount must remove the old database value.
+    if (!Object.prototype.hasOwnProperty.call(couponData, "maxDiscountAmount")) {
+        update.$unset = { maxDiscountAmount: 1 };
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(couponData, "usageLimit")) {
+        update.$unset = { ...(update.$unset || {}), usageLimit: 1 };
+    }
+
     return Coupon.findByIdAndUpdate(
         couponId,
-        couponData,
+        update,
         {
             new: true,
             runValidators: true

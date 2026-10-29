@@ -3,13 +3,7 @@ import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import "../../styles/ProductDetails.css";
 import Header from "../../components/common/Header";
 import Footer from "../../components/common/Footer";
-
-const API_URL = (
-    import.meta.env.VITE_API_BASE_URL ||
-    (import.meta.env.PROD
-        ? "https://aquacart.onrender.com"
-        : "http://localhost:5000")
-).replace(/\/+$/, "");
+import { API_BASE_URL } from "../../config/apiConfig.js";
 
 const MAX_REVIEW_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
@@ -55,7 +49,7 @@ function ProductDetails() {
                 setLoading(true);
                 setError("");
 
-                const response = await fetch(`${API_URL}/api/products/${id}`);
+                const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
                 const result = await response.json();
 
                 if (!response.ok) {
@@ -69,8 +63,8 @@ function ProductDetails() {
                 setSelectedVariant(result.data.variants?.[0] || null);
 
                 const [relatedResponse, reviewsResponse] = await Promise.all([
-                    fetch(`${API_URL}/api/products/${id}/related`),
-                    fetch(`${API_URL}/api/products/${id}/reviews`)
+                    fetch(`${API_BASE_URL}/api/products/${id}/related`),
+                    fetch(`${API_BASE_URL}/api/products/${id}/reviews`)
                 ]);
 
                 const [relatedResult, reviewsResult] = await Promise.all([
@@ -105,7 +99,7 @@ function ProductDetails() {
                 if (token) {
                     try {
                         const eligibilityResponse = await fetch(
-                            `${API_URL}/api/reviews/eligibility/${id}`,
+                            `${API_BASE_URL}/api/reviews/eligibility/${id}`,
                             {
                                 method: "GET",
                                 cache: "no-store",
@@ -243,7 +237,7 @@ function ProductDetails() {
 
             setCartMessage("");
 
-            const response = await fetch(`${API_URL}/api/cart`, {
+            const response = await fetch(`${API_BASE_URL}/api/cart`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -394,7 +388,7 @@ function ProductDetails() {
         setReviewSubmitting(true);
 
         try {
-            const response = await fetch(`${API_URL}/api/reviews`, {
+            const response = await fetch(`${API_BASE_URL}/api/reviews`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -459,7 +453,7 @@ function ProductDetails() {
             ? photoPath
             : `/${photoPath}`;
 
-        return `${API_URL}${normalizedPath}`;
+        return `${API_BASE_URL}${normalizedPath}`;
     }
 
     if (loading) {

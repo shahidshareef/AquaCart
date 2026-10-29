@@ -34,11 +34,6 @@ function AdminLogin() {
                 password
             );
 
-            console.log(
-                "ADMIN LOGIN RESPONSE:",
-                response.data
-            );
-
             // Verified admin accounts receive a token immediately and can
             // enter the dashboard without OTP. Unverified accounts must verify
             // the OTP sent by the backend.
